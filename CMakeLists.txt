@@ -28,11 +28,11 @@ set(CMAKE_EXE_LINKER_FLAGS
 
 # Source files
 file(GLOB_RECURSE SOURCES
-    "gpio/src/*.c"
-    "spi/src/*.c"
-    "uart/src/*.c"
-    "systick/src/*.c"
-    "mpu9250/src/*.c"
+    "Drivers/gpio/src/*.c"
+    "Drivers/spi/src/*.c"
+    "Drivers/uart/src/*.c"
+    "Drivers/systick/src/*.c"
+    "Drivers/mpu9250/src/*.c"
     "system/*.c"
     "example/src/*.c"
     "Startup/*.s"
@@ -42,11 +42,11 @@ file(GLOB_RECURSE SOURCES
 include_directories(
     chip_headers/CMSIS/Device/ST/STM32F4xx/Include
     chip_headers/CMSIS/Include
-    gpio/inc
-    spi/inc
-    uart/inc
-    systick/inc
-    mpu9250/inc
+    Drivers/gpio/inc
+    Drivers/spi/inc
+    Drivers/uart/inc
+    Drivers/systick/inc
+    Drivers/mpu9250/inc
 )
 
 
