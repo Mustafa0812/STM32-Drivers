@@ -1,5 +1,6 @@
 #include "spi.h"
 #include "mpu9250.h"
+#include "systick.h"
 
 /* MPU-9250 SPI protocol (PS-MPU-9250A-01 §3.3):
  * First byte = R/W bit (bit 7) | register address (bits 6:0)
@@ -38,8 +39,8 @@ void mpu_init(void)
     spi_gpio_init();
     spi_init();
 
-    mpu_write(POWER_MANAGEMENT, 0x00);           /* wake from sleep, use internal oscillator */
-    for (volatile int i = 0; i < 100000; i++);   /* allow ~6 ms for oscillator to stabilise */
+    mpu_write(POWER_MANAGEMENT, 0x00);   /* wake from sleep, use internal oscillator */
+    delay(6);                            /* allow 6 ms for oscillator to stabilise */
     mpu_write(POWER_MANAGEMENT2, 0x00);          /* enable all accelerometer and gyro axes */
     mpu_write(ACCEL_CONFIG, 0x08);               /* full-scale range: ±4 g (8192 LSB/g) */
 }

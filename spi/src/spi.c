@@ -1,10 +1,7 @@
 #include "stm32f4xx.h"
 #include "spi.h"
 
-/* RCC_AHB1ENR bit 0 = GPIOAEN (RM0383 §6.3.10) */
-#define GPIOAEN  (1U << 0)
-/* RCC_APB2ENR bit 12 = SPI1EN (RM0383 §6.3.15) */
-#define SPI1EN   (1U << 12)
+/* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.15) */
 
 /* SPI_SR flag bits (RM0383 §20.5.3) */
 #define SPI_SR_TXE   (1U << 1)   /* Transmit buffer empty */
@@ -17,7 +14,7 @@
 void spi_gpio_init(void)
 {
     /* Enable GPIOA clock */
-    RCC->AHB1ENR |= GPIOAEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
     /* PA4 → output (software CS, active-low) — MODER[9:8] = 01 */
     GPIOA->MODER |=  (1U << 8);
@@ -48,7 +45,7 @@ void spi_gpio_init(void)
 void spi_init(void)
 {
     /* Enable SPI1 clock on APB2 */
-    RCC->APB2ENR |= SPI1EN;
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
     /* Configure SPI_CR1 (RM0383 §20.5.1):
      * Mode 0 (CPOL=0 idle-low, CPHA=0 capture on first edge), MSB first,

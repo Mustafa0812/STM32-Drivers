@@ -1,10 +1,7 @@
 #include "uart.h"
 #include <stdint.h>
 
-/* RCC_AHB1ENR bit 0 = GPIOAEN (RM0383 §6.3.10) */
-#define GPIOAEN   (1U << 0)
-/* RCC_APB1ENR bit 17 = USART2EN (RM0383 §6.3.12) */
-#define USART2EN  (1U << 17)
+/* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.12) */
 
 #define CLKFRQ    16000000UL
 #define BAUDRATE   115200UL
@@ -28,7 +25,7 @@ int __io_putchar(int ch)
 void uart_init(void)
 {
     /* Enable GPIOA clock */
-    RCC->AHB1ENR |= GPIOAEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
     /* PA2 (USART2_TX) → alternate function — MODER[5:4] = 10 */
     GPIOA->MODER |=  (1U << 5);
@@ -41,7 +38,7 @@ void uart_init(void)
     GPIOA->AFR[0] |=  (1U << 8);
 
     /* Enable USART2 clock on APB1 */
-    RCC->APB1ENR |= USART2EN;
+    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
 
     /* BRR = fCLK / BAUD (with rounding) (RM0383 §19.3.4) */
     USART2->BRR = (uint16_t)((CLKFRQ + BAUDRATE / 2) / BAUDRATE);

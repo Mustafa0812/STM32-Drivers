@@ -1,8 +1,6 @@
 #include "gpio.h"
 
-/* RCC_AHB1ENR bits (RM0383 §6.3.10) */
-#define GPIOAEN  (1U << 0)   /* GPIOA clock enable */
-#define GPIOCEN  (1U << 2)   /* GPIOC clock enable */
+/* RCC_AHB1ENR clock-enable bits from CMSIS (RM0383 §6.3.10) */
 
 /* GPIOA BSRR bit positions for LD2 LED on PA5 (RM0383 §8.4.7)
  * BS5 (bit 5)  → set PA5 high; BR5 (bit 21) → set PA5 low */
@@ -15,7 +13,7 @@
 void led_init(void)
 {
     /* Enable GPIOA clock */
-    RCC->AHB1ENR |= GPIOAEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
     /* PA5 → output — MODER[11:10] = 01 */
     GPIOA->MODER |=  (1U << 10);
@@ -25,7 +23,7 @@ void led_init(void)
 void btn_init(void)
 {
     /* Enable GPIOC clock */
-    RCC->AHB1ENR |= GPIOCEN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
 
     /* PC13 → input (reset state) — MODER[27:26] = 00 */
     GPIOC->MODER &= ~(1U << 26);
