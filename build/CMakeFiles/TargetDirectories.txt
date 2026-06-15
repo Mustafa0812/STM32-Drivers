@@ -1,3 +1,0 @@
-C:/Users/musta/OneDrive/Desktop/Embedded C/Embedded C/build/CMakeFiles/stm32_drivers.elf.dir
-C:/Users/musta/OneDrive/Desktop/Embedded C/Embedded C/build/CMakeFiles/edit_cache.dir
-C:/Users/musta/OneDrive/Desktop/Embedded C/Embedded C/build/CMakeFiles/rebuild_cache.dir
