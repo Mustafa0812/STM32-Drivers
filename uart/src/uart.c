@@ -1,0 +1,58 @@
+#include "uart.h"
+#include <stdint.h>
+
+/* RCC_AHB1ENR bit 0 = GPIOAEN (RM0383 §6.3.10) */
+#define GPIOAEN   (1U << 0)
+/* RCC_APB1ENR bit 17 = USART2EN (RM0383 §6.3.12) */
+#define USART2EN  (1U << 17)
+
+#define CLKFRQ    16000000UL
+#define BAUDRATE   115200UL
+
+/* USART_SR bits (RM0383 §19.6.1) */
+#define USART_SR_TXE  (1U << 7)   /* Transmit data register empty */
+
+/* USART_CR1 bits (RM0383 §19.6.4) */
+#define USART_CR1_TE  (1U << 3)   /* Transmitter enable */
+#define USART_CR1_UE  (1U << 13)  /* USART enable */
+
+static void uart_write(int ch);
+
+/* Newlib retargeting hook — called by printf/putchar */
+int __io_putchar(int ch)
+{
+    uart_write(ch);
+    return ch;
+}
+
+void uart_init(void)
+{
+    /* Enable GPIOA clock */
+    RCC->AHB1ENR |= GPIOAEN;
+
+    /* PA2 (USART2_TX) → alternate function — MODER[5:4] = 10 */
+    GPIOA->MODER |=  (1U << 5);
+    GPIOA->MODER &= ~(1U << 4);
+
+    /* Set AF7 (USART2) on PA2 via AFRL — AFR[0][11:8] = 0111 (RM0383 Table 9) */
+    GPIOA->AFR[0] &= ~(1U << 11);
+    GPIOA->AFR[0] |=  (1U << 10);
+    GPIOA->AFR[0] |=  (1U << 9);
+    GPIOA->AFR[0] |=  (1U << 8);
+
+    /* Enable USART2 clock on APB1 */
+    RCC->APB1ENR |= USART2EN;
+
+    /* BRR = fCLK / BAUD (with rounding) (RM0383 §19.3.4) */
+    USART2->BRR = (uint16_t)((CLKFRQ + BAUDRATE / 2) / BAUDRATE);
+
+    /* Enable transmitter then USART (RM0383 §19.6.4) */
+    USART2->CR1  = USART_CR1_TE;
+    USART2->CR1 |= USART_CR1_UE;
+}
+
+static void uart_write(int ch)
+{
+    while (!(USART2->SR & USART_SR_TXE)){}   /* wait until TX register empty */
+    USART2->DR = (uint8_t)ch;
+}

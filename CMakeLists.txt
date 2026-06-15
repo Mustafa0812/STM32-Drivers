@@ -10,7 +10,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 project(stm32_drivers C ASM)
 
-# CPU flags for STM32F401 Cortex-M4
+# CPU flags for STM32F411 Cortex-M4
 set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard")
 
 # Compiler flags
@@ -28,22 +28,25 @@ set(CMAKE_EXE_LINKER_FLAGS
 
 # Source files
 file(GLOB_RECURSE SOURCES
-    "src/*.c"
-    "drivers/**/*.c"
-    "startup/*.s"
+    "gpio/src/*.c"
+    "spi/src/*.c"
+    "uart/src/*.c"
+    "systick/src/*.c"
+    "mpu9250/src/*.c"
+    "system/*.c"
+    "example/src/*.c"
+    "Startup/*.s"
 )
 
-# CMSIS include paths — your existing headers
+# Include paths — CMSIS headers + per-driver inc folders
 include_directories(
     chip_headers/CMSIS/Device/ST/STM32F4xx/Include
     chip_headers/CMSIS/Include
-    drivers/uart
-    drivers/spi
-    drivers/i2c
-    drivers/gpio
-    drivers/timers
-    drivers/pwm
-    src
+    gpio/inc
+    spi/inc
+    uart/inc
+    systick/inc
+    mpu9250/inc
 )
 
 
