@@ -36,7 +36,7 @@ file(GLOB_RECURSE SOURCES
     "Drivers/systick/src/*.c"
     "Drivers/mpu9250/src/*.c"
     "system/*.c"
-    "Sensor Examples/src/*.c"
+    "example/src/*.c"
     "Startup/*.s"
 )
 

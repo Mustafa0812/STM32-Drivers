@@ -7,11 +7,18 @@ int main(void)
     uart_init();
     mpu_init();
 
+    uint8_t who_am_i = mpu_read_reg(DEVICEID);
+    printf("WHO_AM_I: 0x%02X (expect 0x71)\r\n", who_am_i);
+
     uint8_t  data_buffer[6];
 
     while (1) {
         /* Burst-read 6 bytes from ACCEL_XOUT_H: X-high, X-low, Y-high, Y-low, Z-high, Z-low */
         mpu_burst_read(ACCEL_XOUT_H, 6, data_buffer);
+
+        printf("raw: %02X %02X %02X %02X %02X %02X\r\n",
+               data_buffer[0], data_buffer[1], data_buffer[2],
+               data_buffer[3], data_buffer[4], data_buffer[5]);
 
         int16_t acc_x = (int16_t)((uint16_t)data_buffer[0] << 8 | data_buffer[1]);
         int16_t acc_y = (int16_t)((uint16_t)data_buffer[2] << 8 | data_buffer[3]);
@@ -25,4 +32,5 @@ int main(void)
         printf("acc_x : %ld mg  acc_y : %ld mg  acc_z : %ld mg\r\n",
                (long)acc_xmg, (long)acc_ymg, (long)acc_zmg);
     }
+               
 }

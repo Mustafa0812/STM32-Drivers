@@ -106,6 +106,10 @@ Demonstrates the full driver stack. Initialises UART and MPU-9250, then continuo
 acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 ```
 
+Live accelerometer output captured in RealTerm at 115200 baud, showing X/Y/Z readings in milli-g alongside the raw SPI bytes:
+
+![Accelerometer Readings](images/Accelerometer%20Readings.png)
+
 ---
 
 ## Pin Summary
