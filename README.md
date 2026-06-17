@@ -16,7 +16,7 @@ Controls the Nucleo-64 on-board LED (PA5) and user button (PC13).
 | `btn_init()` | Enables GPIOC clock; configures PC13 as input |
 | `btn_state()` | Returns `true` when button is pressed (inverts active-low logic) |
 
-> Polling only — no EXTI/interrupt support.
+> Polling only — EXTI interrupt support planned.
 
 ---
 
@@ -32,7 +32,7 @@ Transmit-only USART2 driver on PA2 (TX), wired to the Nucleo's ST-LINK virtual C
 | `uart_init()` | Enables clocks; configures PA2 as AF7; sets BRR; enables TE and UE |
 | `__io_putchar()` | Newlib retargeting hook — connects `printf` / `putchar` to UART TX |
 
-> TX only — no RX, no interrupts, no DMA.
+> TX only — RX and interrupt-driven support planned. No DMA.
 
 ---
 
@@ -56,7 +56,7 @@ Full-duplex SPI1 master driver. Chip-select is managed by the device driver (PA4
 | `spi_init()` | Enables SPI1 clock; configures CR1; enables SPE |
 | `spi_transceive(data)` | Blocking full-duplex transfer; returns received byte |
 
-> Blocking/polling only. CS is the responsibility of the device driver.
+> Blocking/polling only — interrupt-driven support planned. CS is the responsibility of the device driver.
 
 ---
 
@@ -79,7 +79,7 @@ I2C1 master driver on PB8 (SCL) and PB9 (SDA), configured for standard mode (100
 | `burst_read_reg(slave, target, n, buffer)` | Reads `n` bytes from register `target` on device `slave` into `buffer` |
 | `write_reg(slave, target, data)` | Writes one byte `data` to register `target` on device `slave` |
 
-> Polling only — no interrupt or DMA support. Addresses are 7-bit (not pre-shifted).
+> Polling only — interrupt-driven support planned. Addresses are 7-bit (not pre-shifted).
 
 ---
 
