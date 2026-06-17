@@ -1,10 +1,13 @@
 #include "uart.h"
+#include "spi.h"
 #include "mpu9250.h"
 #include <stdio.h>
 
 int main(void)
 {
     uart_init();
+    spi_gpio_init();
+    spi_init();
     mpu_init();
 
     uint8_t who_am_i = mpu_read_reg(DEVICEID);

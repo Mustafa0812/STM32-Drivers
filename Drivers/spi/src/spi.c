@@ -8,18 +8,10 @@
 #define SPI_SR_RXNE  (1U << 0)   /* Receive buffer not empty */
 #define SPI_SR_BSY   (1U << 7)   /* Busy flag */
 
-/* PA4 bit mask for ODR — used as software chip-select */
-#define PA4  (1U << 4)
-
 void spi_gpio_init(void)
 {
     /* Enable GPIOA clock */
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-
-    /* PA4 → output (software CS, active-low) — MODER[9:8] = 01 */
-    GPIOA->MODER |=  (1U << 8);
-    GPIOA->MODER &= ~(1U << 9);
-    GPIOA->ODR   |=  PA4;        /* deassert CS at startup */
 
     /* PA5 (SCK), PA6 (MISO), PA7 (MOSI) → alternate function — MODER bits = 10 */
     GPIOA->MODER |=  (1U << 11); GPIOA->MODER &= ~(1U << 10); /* PA5 */
@@ -74,12 +66,3 @@ uint8_t spi_transceive(uint8_t data)
     return received;
 }
 
-void select_slave(void)
-{
-    GPIOA->ODR &= ~PA4;   /* CS low → assert */
-}
-
-void deselect_slave(void)
-{
-    GPIOA->ODR |= PA4;    /* CS high → deassert */
-}
