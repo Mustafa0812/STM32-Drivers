@@ -20,7 +20,7 @@ set(CMAKE_C_FLAGS "${CPU_FLAGS} -Wall -O0 -g3 -DSTM32F411xE")
 set(CMAKE_ASM_FLAGS "${CPU_FLAGS}")
 
 # Linker flags
-set(CMAKE_EXE_LINKER_FLAGS 
+set(CMAKE_EXE_LINKER_FLAGS
     "${CPU_FLAGS} \
     -T\"${CMAKE_SOURCE_DIR}/STM32F411RETX_FLASH.ld\" \
     -Wl,--gc-sections \
@@ -28,39 +28,48 @@ set(CMAKE_EXE_LINKER_FLAGS
     --specs=nano.specs \
     --specs=nosys.specs")
 
-# Source files
-file(GLOB_RECURSE SOURCES
-    "Drivers/gpio/src/*.c"
-    "Drivers/spi/src/*.c"
-    "Drivers/uart/src/*.c"
-    "Drivers/systick/src/*.c"
-    "Drivers/mpu9250/src/*.c"
+# Select which example to build:
+#   cmake -B build -DEXAMPLE=mpu9250_accel_i2c   (default)
+#   cmake -B build -DEXAMPLE=mpu9250_accel_spi
+set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
+
+# Peripheral bus drivers — always compiled
+file(GLOB_RECURSE BUS_SOURCES
+    "drivers/gpio/src/*.c"
+    "drivers/i2c/src/*.c"
+    "drivers/spi/src/*.c"
+    "drivers/systick/src/*.c"
+    "drivers/uart/src/*.c"
     "system/*.c"
-    "Sensor Examples/src/*.c"
-    "Startup/*.s"
+    "startup/*.s"
 )
 
-# Include paths — CMSIS headers + per-driver inc folders
+# Device driver — select the transport matching the active example
+if(EXAMPLE MATCHES "i2c")
+    set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_i2c.c")
+elseif(EXAMPLE MATCHES "spi")
+    set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi.c")
+endif()
+
+set(SOURCES ${BUS_SOURCES} ${DEVICE_SOURCES} "examples/${EXAMPLE}/main.c")
+
+# Include paths — CMSIS headers always visible; driver inc/ folders auto-discovered
+file(GLOB DRIVER_INC_DIRS "drivers/*/inc")
+
 include_directories(
     chip_headers/CMSIS/Device/ST/STM32F4xx/Include
     chip_headers/CMSIS/Include
-    Drivers/gpio/inc
-    Drivers/spi/inc
-    Drivers/uart/inc
-    Drivers/systick/inc
-    Drivers/mpu9250/inc
+    ${DRIVER_INC_DIRS}
 )
-
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
 
 # Generate .hex and .bin after every build
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-    COMMAND ${CMAKE_OBJCOPY} -O ihex 
-        $<TARGET_FILE:${PROJECT_NAME}.elf> 
+    COMMAND ${CMAKE_OBJCOPY} -O ihex
+        $<TARGET_FILE:${PROJECT_NAME}.elf>
         ${PROJECT_NAME}.hex
-    COMMAND ${CMAKE_OBJCOPY} -O binary 
-        $<TARGET_FILE:${PROJECT_NAME}.elf> 
+    COMMAND ${CMAKE_OBJCOPY} -O binary
+        $<TARGET_FILE:${PROJECT_NAME}.elf>
         ${PROJECT_NAME}.bin
-    COMMENT "Generating HEX and BIN files"
-)
+    COMMENT "Generating HEX and BIN files")

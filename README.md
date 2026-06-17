@@ -4,7 +4,7 @@ Bare-metal peripheral drivers for the STM32F411 Nucleo-64, written in C against 
 
 ## Drivers
 
-### GPIO (`gpio/`)
+### GPIO (`drivers/gpio/`)
 
 Controls the Nucleo-64 on-board LED (PA5) and user button (PC13).
 
@@ -20,7 +20,7 @@ Controls the Nucleo-64 on-board LED (PA5) and user button (PC13).
 
 ---
 
-### UART (`uart/`)
+### UART (`drivers/uart/`)
 
 Transmit-only USART2 driver on PA2 (TX), wired to the Nucleo's ST-LINK virtual COM port.
 
@@ -36,13 +36,12 @@ Transmit-only USART2 driver on PA2 (TX), wired to the Nucleo's ST-LINK virtual C
 
 ---
 
-### SPI (`spi/`)
+### SPI (`drivers/spi/`)
 
-Full-duplex SPI1 master driver with software chip-select on PA4.
+Full-duplex SPI1 master driver. Chip-select is managed by the device driver (PA4 for MPU-9250).
 
 | Pin | Signal |
 |---|---|
-| PA4 | Software CS (active-low) |
 | PA5 | SCK |
 | PA6 | MISO |
 | PA7 | MOSI |
@@ -53,17 +52,38 @@ Full-duplex SPI1 master driver with software chip-select on PA4.
 
 | Function | Description |
 |---|---|
-| `spi_gpio_init()` | Configures PA4 as output (CS) and PA5/6/7 as AF5 |
+| `spi_gpio_init()` | Configures PA5/6/7 as AF5 |
 | `spi_init()` | Enables SPI1 clock; configures CR1; enables SPE |
 | `spi_transceive(data)` | Blocking full-duplex transfer; returns received byte |
-| `select_slave()` | Asserts CS (PA4 low) |
-| `deselect_slave()` | Deasserts CS (PA4 high) |
 
-> Blocking/polling only. Single slave.
+> Blocking/polling only. CS is the responsibility of the device driver.
 
 ---
 
-### SysTick (`systick/`)
+### I2C (`drivers/i2c/`)
+
+I2C1 master driver on PB8 (SCL) and PB9 (SDA), configured for standard mode (100 kHz).
+
+| Pin | Signal |
+|---|---|
+| PB8 | SCL |
+| PB9 | SDA |
+
+- **Mode:** Standard mode, 100 kHz
+- **Alternate function:** AF4
+- **Pull-ups:** Internal pull-ups enabled (open-drain output type)
+
+| Function | Description |
+|---|---|
+| `i2c_init()` | Configures PB8/9 as AF4 open-drain; enables I2C1 clock; sets CCR and TRISE |
+| `burst_read_reg(slave, target, n, buffer)` | Reads `n` bytes from register `target` on device `slave` into `buffer` |
+| `write_reg(slave, target, data)` | Writes one byte `data` to register `target` on device `slave` |
+
+> Polling only — no interrupt or DMA support. Addresses are 7-bit (not pre-shifted).
+
+---
+
+### SysTick (`drivers/systick/`)
 
 Blocking millisecond delay using the Cortex-M4 SysTick timer.
 
@@ -78,37 +98,64 @@ Blocking millisecond delay using the Cortex-M4 SysTick timer.
 
 ---
 
-### MPU-9250 (`mpu9250/`)
+### MPU-9250 (`drivers/mpu9250/`)
 
-Accelerometer driver for the InvenSense MPU-9250 over SPI. Implements the MPU-9250 SPI protocol: bit 7 of the address byte selects read (1) or write (0); burst reads auto-increment the register address.
+Accelerometer driver for the InvenSense MPU-9250. Two transport implementations are provided — SPI and I2C — sharing the same function interface.
 
-**Initialisation settings:**
+**Initialisation settings (both transports):**
 - Wakes device from sleep (PWR_MGMT_1 = 0x00)
 - Enables all accelerometer and gyro axes (PWR_MGMT_2 = 0x00)
 - Sets accelerometer full-scale range to ±4 g (8192 LSB/g)
 
+#### SPI transport (`mpu9250_spi.c / mpu9250_spi.h`)
+
+Implements the MPU-9250 SPI protocol: bit 7 of the address byte selects read (1) or write (0); burst reads auto-increment the register address. CS is managed on PA4.
+
 | Function | Description |
 |---|---|
-| `mpu_init()` | Calls SPI init; wakes device; configures accel range |
-| `mpu_read_reg(reg)` | Reads a single register; returns the byte |
-| `mpu_write(reg, data)` | Writes a single byte to a register |
+| `mpu_init()` | Configures PA4 as CS; wakes device; sets accel range |
+| `mpu_read_reg(reg)` | Single register read; returns the byte |
+| `mpu_write(reg, data)` | Writes one byte to a register |
 | `mpu_burst_read(reg, length, buffer)` | Reads `length` bytes starting at `reg` into `buffer` |
 
-> Gyro axes are enabled but not configured or read. No magnetometer (AK8963) support.
+#### I2C transport (`mpu9250_i2c.c / mpu9250_i2c.h`)
+
+Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
+
+| Function | Description |
+|---|---|
+| `mpu_init()` | Wakes device; sets accel range (`i2c_init()` called separately in main) |
+| `mpu_write(reg, data)` | Writes one byte to a register |
+| `mpu_burst_read(reg, buffer)` | Reads 6 bytes starting at `reg` into `buffer` |
+
+> Gyro axes are enabled but not read. No magnetometer (AK8963) support.
 
 ---
 
-## Sensor Example (`Sensor Examples/`)
+## Examples (`examples/`)
 
-Demonstrates the full driver stack. Initialises UART and MPU-9250, then continuously burst-reads the 6 accelerometer bytes (X/Y/Z high+low), reconstructs signed 16-bit values, converts to milli-g, and prints over UART via `printf`.
+Each example demonstrates the full driver stack for a specific transport. Select which example to build with the `EXAMPLE` CMake variable (default: `mpu9250_accel_i2c`).
+
+### mpu9250_accel_i2c
+
+Initialises UART, I2C, and MPU-9250 (I2C transport), then continuously burst-reads the 6 accelerometer bytes (X/Y/Z high+low), reconstructs signed 16-bit values, converts to milli-g, and prints over UART at 500 ms intervals.
 
 ```
+acc_x : -193 mg  acc_y : -760 mg  acc_z : 355 mg
+```
+
+![I2C Accelerometer Readings](images/I2C%20READINGS.png)
+
+### mpu9250_accel_spi
+
+Same accelerometer readout over SPI. Also prints the WHO_AM_I register (expect 0x71) on startup.
+
+```
+WHO_AM_I: 0x71 (expect 0x71)
 acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 ```
 
-Live accelerometer output captured in RealTerm at 115200 baud, showing X/Y/Z readings in milli-g alongside the raw SPI bytes:
-
-![Accelerometer Readings](images/Accelerometer%20Readings.png)
+![SPI Accelerometer Readings](images/Accelerometer%20Readings.png)
 
 ---
 
@@ -117,10 +164,12 @@ Live accelerometer output captured in RealTerm at 115200 baud, showing X/Y/Z rea
 | Pin | Peripheral | Function |
 |---|---|---|
 | PA2 | USART2 | TX (AF7) |
-| PA4 | SPI1 | Software CS |
+| PA4 | SPI1 / MPU-9250 | Software CS (active-low) |
 | PA5 | SPI1 / LED | SCK (AF5) / LD2 output |
 | PA6 | SPI1 | MISO (AF5) |
 | PA7 | SPI1 | MOSI (AF5) |
+| PB8 | I2C1 | SCL (AF4) |
+| PB9 | I2C1 | SDA (AF4) |
 | PC13 | — | User button input (active-low) |
 
 > PA5 is shared between the on-board LED and SPI1 SCK. Do not use both simultaneously.
@@ -132,7 +181,12 @@ Live accelerometer output captured in RealTerm at 115200 baud, showing X/Y/Z rea
 The project uses CMake with an ARM GCC toolchain. A VS Code launch configuration with OpenOCD is included for flashing and debugging.
 
 ```bash
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=<toolchain>.cmake
+# Build the default example (mpu9250_accel_i2c)
+cmake -B build
+cmake --build build
+
+# Build the SPI example instead
+cmake -B build -DEXAMPLE=mpu9250_accel_spi
 cmake --build build
 ```
 
