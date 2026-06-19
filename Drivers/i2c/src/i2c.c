@@ -1,5 +1,4 @@
 #include "i2c.h"
-#include "stm32f4xx.h"
 
 /* SR1 flag bits (RM0383 §18.6.6) */
 #define SB    (1U << 0)    /* start condition generated */

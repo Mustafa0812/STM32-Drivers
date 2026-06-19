@@ -16,7 +16,20 @@ Controls the Nucleo-64 on-board LED (PA5) and user button (PC13).
 | `btn_init()` | Enables GPIOC clock; configures PC13 as input |
 | `btn_state()` | Returns `true` when button is pressed (inverts active-low logic) |
 
-> Polling only — EXTI interrupt support planned.
+---
+
+### EXTI (`drivers/exti/`)
+
+Interrupt-driven GPIO input driver for the Nucleo-64 user button (PC13), using EXTI line 13 with a falling-edge trigger.
+
+A callback function is registered with `exti_register_callback()` before the interrupt is enabled. Any `void fn(void)` function can be passed, so different actions can be triggered by the same button press without modifying the driver — swap the callback to change the behaviour.
+
+| Function | Description |
+|---|---|
+| `exti_init()` | Enables SYSCFG clock; maps PC13 to EXTI13; configures falling-edge trigger; enables NVIC |
+| `exti_register_callback(cb)` | Registers `cb` as the function called on each button press |
+
+> Always call `exti_register_callback()` before `exti_init()` — the interrupt is live as soon as `exti_init()` returns.
 
 ---
 
@@ -136,6 +149,12 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 
 Each example demonstrates the full driver stack for a specific transport. Select which example to build with the `EXAMPLE` CMake variable (default: `mpu9250_accel_i2c`).
 
+### led
+
+Demonstrates EXTI interrupt-driven button input. Pressing the user button (PC13) triggers a falling-edge interrupt which sets a flag; the `while(1)` loop detects the flag, turns on LD2 (PA5) for one second, then turns it off. The ISR itself returns immediately — all blocking work stays in main context.
+
+Because the driver uses a registered callback, the same button press can drive entirely different behaviour by passing a different function to `exti_register_callback()` — no changes to the driver required.
+
 ### mpu9250_accel_i2c
 
 Initialises UART, I2C, and MPU-9250 (I2C transport), then continuously burst-reads the 6 accelerometer bytes (X/Y/Z high+low), reconstructs signed 16-bit values, converts to milli-g, and prints over UART at 500 ms intervals.
@@ -181,12 +200,16 @@ acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 The project uses CMake with an ARM GCC toolchain. A VS Code launch configuration with OpenOCD is included for flashing and debugging.
 
 ```bash
+# Build the LED/EXTI example
+cmake -B build -DEXAMPLE=led -G "MinGW Makefiles"
+cmake --build build
+
 # Build the default example (mpu9250_accel_i2c)
-cmake -B build
+cmake -B build -G "MinGW Makefiles"
 cmake --build build
 
 # Build the SPI example instead
-cmake -B build -DEXAMPLE=mpu9250_accel_spi
+cmake -B build -DEXAMPLE=mpu9250_accel_spi -G "MinGW Makefiles"
 cmake --build build
 ```
 

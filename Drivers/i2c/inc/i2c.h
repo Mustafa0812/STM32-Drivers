@@ -2,6 +2,7 @@
 #define _I2C_H
 
 #include <stdint.h>
+#include "stm32f4xx.h"
 
 void    i2c_init(void);
 void    burst_read_reg(uint8_t slave, uint8_t target, uint8_t n, uint8_t *buffer);

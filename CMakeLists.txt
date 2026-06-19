@@ -29,6 +29,7 @@ set(CMAKE_EXE_LINKER_FLAGS
     --specs=nosys.specs")
 
 # Select which example to build:
+#   cmake -B build -DEXAMPLE=led
 #   cmake -B build -DEXAMPLE=mpu9250_accel_i2c   (default)
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")

@@ -1,4 +1,3 @@
-#include "stm32f4xx.h"
 #include "spi.h"
 
 /* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.15) */
