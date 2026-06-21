@@ -57,6 +57,15 @@ defined in linker script */
 Reset_Handler:
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
+
+/* Enable FPU — set CP10 and CP11 to full access in CPACR (Cortex-M4 TRM §4.6.6) */
+  ldr   r0, =0xE000ED88
+  ldr   r1, [r0]
+  orr   r1, r1, #(0xF << 20)
+  str   r1, [r0]
+  dsb
+  isb
+
 /* Call the clock system initialization function.*/
   bl  SystemInit
 

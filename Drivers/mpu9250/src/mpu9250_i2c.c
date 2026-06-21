@@ -4,7 +4,7 @@
 
 void mpu_burst_read(uint8_t reg, uint8_t *buffer)
 {
-    burst_read_reg(DEVICE_ADD, reg, 6, buffer);
+    i2c_burst_read_reg(DEVICE_ADD, reg, 6, buffer);
 }
 
 uint8_t mpu_read_reg(uint8_t reg)
@@ -14,7 +14,7 @@ uint8_t mpu_read_reg(uint8_t reg)
 
 void mpu_write(uint8_t reg, uint8_t data)
 {
-    write_reg(DEVICE_ADD, reg, data);
+    i2c_write_reg(DEVICE_ADD, reg, data);
 }
 
 void mpu_init(void)

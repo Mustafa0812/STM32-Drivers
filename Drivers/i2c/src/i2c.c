@@ -1,4 +1,5 @@
 #include "i2c.h"
+#include "stm32f4xx.h"
 
 /* SR1 flag bits (RM0383 §18.6.6) */
 #define SB    (1U << 0)    /* start condition generated */
@@ -75,7 +76,7 @@ void i2c_init(void)
     I2C1->CR1   |= PE;
 }
 
-void burst_read_reg(uint8_t slave, uint8_t target, uint8_t n, uint8_t *buffer)
+void i2c_burst_read_reg(uint8_t slave, uint8_t target, uint8_t n, uint8_t *buffer)
 {
     while (I2C1->SR2 & BSY) {}
 
@@ -114,7 +115,7 @@ void burst_read_reg(uint8_t slave, uint8_t target, uint8_t n, uint8_t *buffer)
     *buffer = I2C1->DR;
 }
 
-void write_reg(uint8_t slave, uint8_t target, uint8_t data)
+void i2c_write_reg(uint8_t slave, uint8_t target, uint8_t data)
 {
     while (I2C1->SR2 & BSY) {}
 
@@ -132,4 +133,39 @@ void write_reg(uint8_t slave, uint8_t target, uint8_t data)
     while (!(I2C1->SR1 & BTF)) {}      /* wait for both bytes shifted out */
 
     I2C1->CR1 |= STOP;
+}
+
+
+
+uint8_t i2c_read_reg (uint8_t slave, uint8_t target){
+
+     while (I2C1->SR2 & BSY) {}
+
+    /* Phase 1: START → slave address (write) → register address */
+    I2C1->CR1 |= START;
+    while (!(I2C1->SR1 & SB)) {}
+
+    I2C1->DR = slave << 1;              /* write direction: bit 0 = 0 */
+    while (!(I2C1->SR1 & ADDR)) {}
+    (void)I2C1->SR1; (void)I2C1->SR2;  /* clear ADDR flag: read SR1 then SR2 */
+
+    while (!(I2C1->SR1 & TxE)) {}
+    I2C1->DR = target;
+    while (!(I2C1->SR1 & TxE)) {}
+
+    /* Phase 2: repeated START → slave address (read) */
+    I2C1->CR1 |= START;
+    while (!(I2C1->SR1 & SB)) {}
+
+    I2C1->DR = (slave << 1) | 1;       /* read direction: bit 0 = 1 */
+    I2C1->CR1 |= ACK;                  /* enable ACK before clearing ADDR */
+    while (!(I2C1->SR1 & ADDR)) {}
+    (void)I2C1->SR1; (void)I2C1->SR2;  /* clear ADDR */
+
+    I2C1->CR1 &= ~ACK;
+    I2C1->CR1 |= STOP;
+    while (!(I2C1->SR1 & RxNE)) {}
+    uint8_t result = I2C1->DR;
+
+    return result;
 }

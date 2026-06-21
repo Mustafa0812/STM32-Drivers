@@ -32,6 +32,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=led
 #   cmake -B build -DEXAMPLE=mpu9250_accel_i2c   (default)
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi
+#   cmake -B build -DEXAMPLE=bmp390_temp_i2c
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
 
 # Peripheral bus drivers — always compiled
@@ -45,11 +46,13 @@ file(GLOB_RECURSE BUS_SOURCES
     "startup/*.s"
 )
 
-# Device driver — select the transport matching the active example
-if(EXAMPLE MATCHES "i2c")
+# Device driver — matched by exact example name to avoid false pattern matches
+if(EXAMPLE STREQUAL "mpu9250_accel_i2c")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_i2c.c")
-elseif(EXAMPLE MATCHES "spi")
+elseif(EXAMPLE STREQUAL "mpu9250_accel_spi")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi.c")
+elseif(EXAMPLE STREQUAL "bmp390_temp_i2c")
+    set(DEVICE_SOURCES "drivers/bmp390/src/bmp390.c")
 endif()
 
 set(SOURCES ${BUS_SOURCES} ${DEVICE_SOURCES} "examples/${EXAMPLE}/main.c")

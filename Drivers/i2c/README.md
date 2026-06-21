@@ -25,8 +25,9 @@ I2C1 master driver on PB8 (SCL) and PB9 (SDA), configured for standard mode at 1
 | Function | Description |
 |---|---|
 | `i2c_init()` | Configures PB8/PB9 as AF4 open-drain; enables I2C1 clock; sets CCR and TRISE; enables peripheral |
-| `write_reg(slave, target, data)` | Writes one byte `data` to register `target` on 7-bit address `slave` |
-| `burst_read_reg(slave, target, n, buffer)` | Reads `n` bytes starting at register `target` from device `slave` into `buffer` |
+| `i2c_write_reg(slave, target, data)` | Writes one byte `data` to register `target` on 7-bit address `slave` |
+| `i2c_read_reg(slave, target)` | Reads and returns one byte from register `target` on device `slave` |
+| `i2c_burst_read_reg(slave, target, n, buffer)` | Reads `n` bytes starting at register `target` from device `slave` into `buffer` |
 
 ## Usage
 
@@ -35,10 +36,12 @@ I2C1 master driver on PB8 (SCL) and PB9 (SDA), configured for standard mode at 1
 
 i2c_init();
 
-write_reg(0x68, 0x6B, 0x00);          /* write single register */
+i2c_write_reg(0x68, 0x6B, 0x00);           /* write single register */
+
+uint8_t val = i2c_read_reg(0x68, 0x75);    /* read single register */
 
 uint8_t buf[6];
-burst_read_reg(0x68, 0x3B, 6, buf);   /* read 6 bytes */
+i2c_burst_read_reg(0x68, 0x3B, 6, buf);    /* read 6 bytes */
 ```
 
 Addresses are **7-bit, not pre-shifted** — the driver shifts them internally before placing on the bus.
