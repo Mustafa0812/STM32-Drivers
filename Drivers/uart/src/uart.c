@@ -1,5 +1,7 @@
 #include "uart.h"
 #include <stdint.h>
+#include "stm32f4xx.h"
+#include <stddef.h>
 
 /* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.12) */
 
@@ -13,7 +15,13 @@
 #define USART_CR1_TE  (1U << 3)   /* Transmitter enable */
 #define USART_CR1_UE  (1U << 13)  /* USART enable */
 
-static void uart_write(int ch);
+#define TX_BUFF_SIZE 256
+
+static uint8_t ring_buffer[TX_BUFF_SIZE] = {0};
+static volatile int write_index = 0;
+static volatile int read_index = 0;
+
+static void uart_write(uint8_t ch);
 
 /* Newlib retargeting hook — called by printf/putchar */
 int __io_putchar(int ch)
@@ -46,10 +54,41 @@ void uart_init(void)
     /* Enable transmitter then USART (RM0383 §19.6.4) */
     USART2->CR1  = USART_CR1_TE;
     USART2->CR1 |= USART_CR1_UE;
+
+    NVIC_EnableIRQ(USART2_IRQn);
+    
 }
 
-static void uart_write(int ch)
-{
-    while (!(USART2->SR & USART_SR_TXE)){}   /* wait until TX register empty */
-    USART2->DR = (uint8_t)ch;
+static void uart_write(uint8_t ch){
+    
+   uint8_t next_index = (write_index + 1) % TX_BUFF_SIZE;
+
+   if (next_index != read_index){
+
+        ring_buffer[write_index] = ch;
+
+        write_index = next_index;
+
+        USART2 ->CR1 |= USART_CR1_TXEIE;
+
+   }
+    
+}
+
+
+
+void USART2_IRQHandler (void){
+
+    if (USART2 -> SR & USART_SR_TXE){
+
+        USART2 -> DR = ring_buffer[read_index];
+        read_index = (read_index + 1) % TX_BUFF_SIZE;
+
+        if (read_index == write_index){
+
+            USART2 ->CR1 &= ~USART_CR1_TXEIE;
+
+        }
+    }
+
 }
