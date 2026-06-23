@@ -35,17 +35,18 @@ A callback function is registered with `exti_register_callback()` before the int
 
 ### UART (`drivers/uart/`)
 
-Transmit-only USART2 driver on PA2 (TX), wired to the Nucleo's ST-LINK virtual COM port.
+Interrupt-driven USART2 TX driver on PA2, wired to the Nucleo's ST-LINK virtual COM port. A 256-byte ring buffer is drained by the USART2 TXE interrupt so `printf` returns immediately without stalling the CPU.
 
 - **Baud rate:** 115200 @ 16 MHz HSI
 - **Alternate function:** AF7
+- **TX buffer:** 256-byte ring buffer, ISR-drained
 
 | Function | Description |
 |---|---|
-| `uart_init()` | Enables clocks; configures PA2 as AF7; sets BRR; enables TE and UE |
+| `uart_init()` | Enables clocks; configures PA2 as AF7; sets BRR; enables TE, UE, and NVIC |
 | `__io_putchar()` | Newlib retargeting hook — connects `printf` / `putchar` to UART TX |
 
-> TX only — RX and interrupt-driven support planned. No DMA.
+> TX only — no RX. Bytes dropped silently if the 256-byte ring buffer is full.
 
 ---
 

@@ -33,9 +33,9 @@ Temp: 28.15 C
 
 ## Initialisation Sequence
 
-1. `uart_init()` — USART2 TX on PA2, 115200 baud
+1. `uart_init()` — USART2 TX on PA2, 115200 baud, interrupt-driven 256-byte ring buffer
 2. `i2c_init()` — I2C1 on PB8/PB9, 100 kHz standard mode
-3. `bmp_init()` — configures BMP390: I2C interface, x8 temperature oversampling, 200 Hz ODR, normal mode
+3. `bmp_init()` — configures BMP390: I2C interface, x2 temperature oversampling, 200 Hz ODR, normal mode
 4. Trim coefficients T1, T2, T3 read once from registers 0x31–0x35
 5. Continuous burst-read of 3 bytes from `BMP390_TEMPDATA` (0x07); datasheet compensation formula applied in floating-point to produce °C
 
