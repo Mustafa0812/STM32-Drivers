@@ -3,12 +3,18 @@
 #include "mpu9250_spi.h"
 #include <stdio.h>
 
+
+
 int main(void)
 {
+
     uart_init();
     spi_gpio_init();
     spi_init();
     mpu_init();
+
+
+
 
     uint8_t who_am_i = mpu_read_reg(DEVICEID);
     printf("WHO_AM_I: 0x%02X (expect 0x71)\r\n", who_am_i);

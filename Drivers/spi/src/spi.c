@@ -1,4 +1,5 @@
 #include "spi.h"
+#include <stddef.h>
 
 /* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.15) */
 
@@ -6,6 +7,8 @@
 #define SPI_SR_TXE   (1U << 1)   /* Transmit buffer empty */
 #define SPI_SR_RXNE  (1U << 0)   /* Receive buffer not empty */
 #define SPI_SR_BSY   (1U << 7)   /* Busy flag */
+
+
 
 void spi_gpio_init(void)
 {
@@ -51,17 +54,15 @@ void spi_init(void)
     SPI1->CR1 |=  (0b100 << 3); /* BR[2:0] = 100: fPCLK/32 (~500 kHz at 16 MHz) */
 
     SPI1->CR1 |=  (1U << 6);    /* SPE = 1: enable SPI (must be set last) */
+
 }
+
 
 uint8_t spi_transceive(uint8_t data)
 {
-    while (!(SPI1->SR & SPI_SR_TXE)){}    /* wait until TX buffer empty */
+    while (!(SPI1->SR & SPI_SR_TXE)){}
     SPI1->DR = data;
-
-    while (!(SPI1->SR & SPI_SR_RXNE)){}   /* wait until RX buffer has data */
-    uint8_t received = SPI1->DR;
-
-    while (SPI1->SR & SPI_SR_BSY){}       /* wait for bus idle before returning */
-    return received;
+    
+    while (!(SPI1->SR & SPI_SR_RXNE)){}
+    return SPI1->DR;
 }
-
