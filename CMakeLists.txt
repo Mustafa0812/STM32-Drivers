@@ -32,6 +32,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=led
 #   cmake -B build -DEXAMPLE=mpu9250_accel_i2c   (default)
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi
+#   cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma
 #   cmake -B build -DEXAMPLE=bmp390_temp_i2c
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
 
@@ -42,6 +43,7 @@ file(GLOB_RECURSE BUS_SOURCES
     "drivers/spi/src/*.c"
     "drivers/systick/src/*.c"
     "drivers/uart/src/*.c"
+    "drivers/dma/*/src/*.c"
     "system/*.c"
     "startup/*.s"
 )
@@ -51,6 +53,8 @@ if(EXAMPLE STREQUAL "mpu9250_accel_i2c")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_i2c.c")
 elseif(EXAMPLE STREQUAL "mpu9250_accel_spi")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi.c")
+elseif(EXAMPLE STREQUAL "mpu9250_accel_spi_dma")
+    set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
 elseif(EXAMPLE STREQUAL "bmp390_temp_i2c")
     set(DEVICE_SOURCES "drivers/bmp390/src/bmp390.c")
 endif()
@@ -59,11 +63,13 @@ set(SOURCES ${BUS_SOURCES} ${DEVICE_SOURCES} "examples/${EXAMPLE}/main.c")
 
 # Include paths — CMSIS headers always visible; driver inc/ folders auto-discovered
 file(GLOB DRIVER_INC_DIRS "drivers/*/inc")
+file(GLOB DMA_INC_DIRS "drivers/dma/*/inc")
 
 include_directories(
     chip_headers/CMSIS/Device/ST/STM32F4xx/Include
     chip_headers/CMSIS/Include
     ${DRIVER_INC_DIRS}
+    ${DMA_INC_DIRS}
 )
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})

@@ -55,6 +55,7 @@ void spi_init(void)
 
     SPI1->CR1 |=  (1U << 6);    /* SPE = 1: enable SPI (must be set last) */
 
+
 }
 
 
