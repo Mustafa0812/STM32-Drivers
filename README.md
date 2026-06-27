@@ -70,7 +70,26 @@ Full-duplex SPI1 master driver. Chip-select is managed by the device driver (PA4
 | `spi_init()` | Enables SPI1 clock; configures CR1; enables SPE |
 | `spi_transceive(data)` | Blocking full-duplex transfer; returns received byte |
 
-> Blocking/polling only — interrupt-driven support planned. CS is the responsibility of the device driver.
+> Blocking/polling only. CS is the responsibility of the device driver. For DMA-based transfers see the DMA SPI driver below.
+
+---
+
+### DMA SPI (`drivers/dma/dma_spi/`)
+
+DMA-driven SPI1 full-duplex transfer driver. Uses DMA2 Stream3 (TX) and Stream2 (RX) on channel 3, freeing the CPU during the transfer. Builds on top of the SPI driver — call `spi_gpio_init()` and `spi_init()` before `dma2_init()`.
+
+- **TX:** DMA2 Stream3, Channel 3 (SPI1_TX), memory-to-peripheral
+- **RX:** DMA2 Stream2, Channel 3 (SPI1_RX), peripheral-to-memory
+- **Transfer size:** 8-bit (matches SPI1 8-bit frame)
+- **Completion:** Transfer-complete interrupt on Stream2 (RX); CPU blocks in `spi_dma_transceive` until done
+
+| Function | Description |
+|---|---|
+| `dma2_init()` | Enables DMA2 clock; enables SPI1 TXDMAEN/RXDMAEN; enables NVIC for Stream2/3 |
+| `spi_dma_transceive(rx, tx, len)` | Full-duplex DMA transfer; blocks until RX complete |
+| `spi_dma_transmit(tx, len)` | TX-only wrapper; RX is discarded into an internal dummy buffer |
+
+> Always call `dma2_init()` after `spi_init()` — SPI1 must be clocked before its CR2 register is written. Always arm RX (Stream2) before TX (Stream3) to avoid losing the first received byte.
 
 ---
 
@@ -177,6 +196,10 @@ acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 
 ![SPI Accelerometer Readings](images/Accelerometer%20Readings.png)
 
+### mpu9250_accel_spi_dma
+
+Same accelerometer readout over SPI, using DMA for all transfers. The CPU is free during each SPI transaction and resumes only when the DMA transfer-complete interrupt fires. Initialises UART, SPI, DMA, and MPU-9250 (DMA SPI transport), then continuously burst-reads and prints accelerometer data.
+
 ---
 
 ## Pin Summary
@@ -211,6 +234,10 @@ cmake --build build
 
 # Build the SPI example instead
 cmake -B build -DEXAMPLE=mpu9250_accel_spi -G "MinGW Makefiles"
+cmake --build build
+
+# Build the DMA SPI example
+cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma -G "MinGW Makefiles"
 cmake --build build
 ```
 

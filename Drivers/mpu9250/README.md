@@ -50,6 +50,39 @@ mpu_burst_read(ACCEL_XOUT_H, 6, buf);
 
 ---
 
+## DMA SPI Transport (`mpu9250_spi-dma.c`)
+
+Uses DMA2 Stream3/Stream2 via the DMA SPI driver (`dma_spi.h`) instead of polling. The same SPI1 bus and PA4 chip-select are used. Call `spi_gpio_init()`, `spi_init()`, and `dma2_init()` before `mpu_init()`.
+
+For write operations (`mpu_write`) the RX side is discarded into the driver's internal dummy buffer — the caller does not need to provide an RX buffer. For reads, the DMA transfers a full TX+RX frame and only the response bytes are returned.
+
+### Functions
+
+| Function | Description |
+|---|---|
+| `mpu_init()` | Configures PA4 as CS output; wakes device; sets accelerometer range |
+| `mpu_write(reg, data)` | 2-byte DMA transmit (reg + data); RX discarded |
+| `mpu_read_reg(reg)` | 2-byte DMA transceive; returns the response byte |
+| `mpu_burst_read(reg, length, buffer)` | (length+1)-byte DMA transceive; copies response bytes into `buffer` |
+
+### Usage
+
+```c
+#include "spi.h"
+#include "dma_spi.h"
+#include "mpu9250_spi.h"
+
+spi_gpio_init();
+spi_init();
+dma2_init();    /* must come after spi_init */
+mpu_init();
+
+uint8_t buf[6];
+mpu_burst_read(ACCEL_XOUT_H, 6, buf);
+```
+
+---
+
 ## I2C Transport (`mpu9250_i2c.c`)
 
 Uses I2C1 via the I2C bus driver. Device address: 0x68 (AD0 pin low). `i2c_init()` must be called separately before `mpu_init()`.
