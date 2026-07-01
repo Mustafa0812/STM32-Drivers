@@ -111,7 +111,11 @@ void uart_init(void)
 /**
  * @brief Queue one byte for transmission.
  *
- * Silently drops the byte if the ring buffer is full (255 bytes pending).
+ * Spins until a slot is free if the ring buffer is full (255 bytes pending).
+ * A producer that outruns the UART (e.g. printf calls fired back-to-back
+ * after a fast DMA sensor read) must be throttled here — silently dropping
+ * bytes instead would tear printf output apart mid-string, since only the
+ * dropped bytes vanish while everything around them still gets sent.
  *
  * Critical-section strategy:
  *   The ISR can preempt anywhere in this function.  The only dangerous window
@@ -121,14 +125,15 @@ void uart_init(void)
  *   (runaway ISR sending null bytes).
  *
  *   Clearing TXEIE before the commit and restoring it after makes that window
- *   IRQ-free: the ISR cannot be entered while TXEIE is cleared.
+ *   IRQ-free: the ISR cannot be entered while TXEIE is cleared. Global
+ *   interrupts stay enabled while spinning below, so the ISR keeps draining
+ *   the buffer and read_index keeps advancing.
  */
 static void uart_write(uint8_t ch)
 {
     uint8_t next_index = (write_index + 1) % TX_BUFF_SIZE;
 
-    if (next_index == read_index)
-        return;   /* buffer full — drop byte */
+    while (next_index == read_index) {}   /* buffer full — wait for the ISR to drain a byte */
 
     ring_buffer[write_index] = ch;
 
