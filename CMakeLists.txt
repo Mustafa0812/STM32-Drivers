@@ -34,6 +34,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma
 #   cmake -B build -DEXAMPLE=bmp390_temp_i2c
+#   cmake -B build -DEXAMPLE=pwm_led
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
 
 # Peripheral bus drivers — always compiled
@@ -43,6 +44,7 @@ file(GLOB_RECURSE BUS_SOURCES
     "drivers/spi/src/*.c"
     "drivers/systick/src/*.c"
     "drivers/uart/src/*.c"
+    "drivers/pwm/src/*.c"
     "drivers/dma/*/src/*.c"
     "system/*.c"
     "startup/*.s"
