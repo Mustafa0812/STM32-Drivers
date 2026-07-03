@@ -49,12 +49,20 @@
 /* ── Ring buffer ─────────────────────────────────────────────────────────── */
 
 #define TX_BUFF_SIZE 256   /* must be a power of 2 for the modulo to be cheap */
+#define RX_BUFF_SIZE 256
 
 static uint8_t          ring_buffer[TX_BUFF_SIZE] = {0};
 static volatile int     write_index = 0;   /* next slot to write — thread only */
 static volatile int     read_index  = 0;   /* next slot to read  — ISR only    */
 
 static void uart_write(uint8_t ch);
+uint8_t dma_done = 0;
+static volatile uint8_t  rx_ready = 0;
+uint16_t current_pos = 0;
+uint16_t old_pos = RX_BUFF_SIZE;
+static uint8_t rx_ring_buffer[RX_BUFF_SIZE];
+static volatile uint16_t rx_len = 0;
+
 
 /* ── Newlib retargeting ──────────────────────────────────────────────────── */
 
@@ -177,4 +185,84 @@ void USART2_IRQHandler(void)
             USART2->CR1 &= ~USART_CR1_TXEIE;
         }
     }
+
+    if (USART2->SR & (1U << 4)){
+
+        (void) USART2 -> DR;
+        current_pos = DMA1_Stream5 -> NDTR;
+        rx_len = (old_pos - current_pos + RX_BUFF_SIZE) % RX_BUFF_SIZE;
+        rx_ready = 1;
+        old_pos = current_pos;
+    }
+
+}
+
+void uart_dma_init (void){
+
+    RCC -> AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+
+    NVIC_EnableIRQ (DMA1_Stream5_IRQn);
+
+    USART2 ->CR3 |= USART_CR3_DMAR;
+
+    USART2 -> CR1 |= (1U << 4);
+}
+
+void uart_rx_get(uint8_t *out)
+{   
+
+    uint32_t start_index = RX_BUFF_SIZE - old_pos;
+
+    if (!rx_ready) return;
+
+    for (uint16_t i = 0; i < rx_len; i++) {
+        out[(i)] = rx_ring_buffer[(start_index + i) % RX_BUFF_SIZE];
+    }
+    out[rx_len] = '\0';
+
+    rx_ready = 0;
+}
+
+
+void uart_read(uint8_t *rx_buff, uint16_t buff_size){
+
+    dma_receive(rx_buff, buff_size);
+    uart_rx_get(rx_buff);
+}
+
+void dma_receive (uint8_t *buff, uint16_t buff_size){
+
+    DMA1_Stream5 -> CR &= ~ (1U << 0);
+
+    while (DMA1_Stream5 -> CR & (1U << 0)){}
+
+    DMA1_Stream5 -> CR |= (1U << 27);
+    DMA1_Stream5 -> CR &= ~(1U << 25);
+    DMA1_Stream5 -> CR &= ~(1U << 26);
+
+    DMA1_Stream5 -> CR |= (1U << 10);
+
+    DMA1_Stream5 -> CR |= (1U << 8);
+
+    DMA1_Stream5 -> CR |= (1U << 4);
+
+    DMA1_Stream5 -> CR &= ~(1U << 7);
+    DMA1_Stream5 -> CR &= ~(1U << 6);
+
+    DMA1_Stream5 -> NDTR = buff_size;
+
+    DMA1_Stream5 -> PAR = &(USART2 -> DR);
+
+    DMA1_Stream5 -> M0AR = (uint32_t) buff; 
+
+    DMA1_Stream5 -> CR |= (1U << 0);
+}
+
+
+void DMA1_Stream5_IRQHandler (void){
+
+    if (DMA1 -> HISR & (1U << 11)){
+
+        DMA1 -> HIFCR |= (1U << 11);
+
 }
