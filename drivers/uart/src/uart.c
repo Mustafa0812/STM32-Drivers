@@ -38,13 +38,8 @@
 
 /* ── USART register bit definitions (RM0383) ────────────────────────────── */
 
-/* SR — status register (§19.6.1) */
-#define USART_SR_TXE   (1U << 7)   /* Transmit data register empty         */
-
-/* CR1 — control register 1 (§19.6.4) */
-#define USART_CR1_TE   (1U << 3)   /* Transmitter enable                   */
-#define USART_CR1_UE   (1U << 13)  /* USART enable                         */
-/* USART_CR1_TXEIE is (1U << 7) — defined in CMSIS stm32f4xx.h             */
+/* SR/CR1 bits (RM0383 §19.6.1, §19.6.4) — USART_SR_TXE, USART_CR1_TE/UE/TXEIE
+ * already defined in CMSIS stm32f4xx.h */
 
 /* ── Ring buffer ─────────────────────────────────────────────────────────── */
 
@@ -56,7 +51,7 @@ static volatile int     write_index = 0;   /* next slot to write — thread only
 static volatile int     read_index  = 0;   /* next slot to read  — ISR only    */
 
 static void uart_write(uint8_t ch);
-uint8_t dma_done = 0;
+uint8_t uart_dma_done = 0;
 static volatile uint8_t  rx_ready = 0;
 uint16_t current_pos = 0;
 uint16_t old_pos = RX_BUFF_SIZE;
@@ -206,6 +201,8 @@ void uart_dma_init (void){
     USART2 ->CR3 |= USART_CR3_DMAR;
 
     USART2 -> CR1 |= (1U << 4);
+
+    dma_receive();
 }
 
 void uart_rx_get(uint8_t *out)
@@ -224,13 +221,8 @@ void uart_rx_get(uint8_t *out)
 }
 
 
-void uart_read(uint8_t *rx_buff, uint16_t buff_size){
 
-    dma_receive(rx_buff, buff_size);
-    uart_rx_get(rx_buff);
-}
-
-void dma_receive (uint8_t *buff, uint16_t buff_size){
+void dma_receive (void){
 
     DMA1_Stream5 -> CR &= ~ (1U << 0);
 
@@ -249,20 +241,12 @@ void dma_receive (uint8_t *buff, uint16_t buff_size){
     DMA1_Stream5 -> CR &= ~(1U << 7);
     DMA1_Stream5 -> CR &= ~(1U << 6);
 
-    DMA1_Stream5 -> NDTR = buff_size;
+    DMA1_Stream5 -> NDTR = RX_BUFF_SIZE;
 
     DMA1_Stream5 -> PAR = &(USART2 -> DR);
 
-    DMA1_Stream5 -> M0AR = (uint32_t) buff; 
+    DMA1_Stream5 -> M0AR = (uint32_t) rx_ring_buffer; 
 
     DMA1_Stream5 -> CR |= (1U << 0);
 }
 
-
-void DMA1_Stream5_IRQHandler (void){
-
-    if (DMA1 -> HISR & (1U << 11)){
-
-        DMA1 -> HIFCR |= (1U << 11);
-
-}

@@ -35,6 +35,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma
 #   cmake -B build -DEXAMPLE=bmp390_temp_i2c
 #   cmake -B build -DEXAMPLE=pwm_led
+#   cmake -B build -DEXAMPLE=freertos_blink
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
 
 # Peripheral bus drivers — always compiled
@@ -61,7 +62,19 @@ elseif(EXAMPLE STREQUAL "bmp390_temp_i2c")
     set(DEVICE_SOURCES "drivers/bmp390/src/bmp390.c")
 endif()
 
-set(SOURCES ${BUS_SOURCES} ${DEVICE_SOURCES} "examples/${EXAMPLE}/main.c")
+# FreeRTOS kernel — only compiled for the freertos_blink example, so bare-metal
+# examples never need to provide FreeRTOS-only callbacks like
+# vApplicationStackOverflowHook.
+if(EXAMPLE STREQUAL "freertos_blink")
+    file(GLOB_RECURSE RTOS_SOURCES "third_party/FreeRTOS/*.c")
+    set(RTOS_INC_DIRS
+        third_party/FreeRTOS/include
+        third_party/FreeRTOS/portable/GCC/ARM_CM4F
+        config/
+    )
+endif()
+
+set(SOURCES ${BUS_SOURCES} ${DEVICE_SOURCES} ${RTOS_SOURCES} "examples/${EXAMPLE}/main.c")
 
 # Include paths — CMSIS headers always visible; driver inc/ folders auto-discovered
 file(GLOB DRIVER_INC_DIRS "drivers/*/inc")
@@ -70,6 +83,7 @@ file(GLOB DMA_INC_DIRS "drivers/dma/*/inc")
 include_directories(
     chip_headers/CMSIS/Device/ST/STM32F4xx/Include
     chip_headers/CMSIS/Include
+    ${RTOS_INC_DIRS}
     ${DRIVER_INC_DIRS}
     ${DMA_INC_DIRS}
 )

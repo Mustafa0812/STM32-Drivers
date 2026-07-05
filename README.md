@@ -165,6 +165,26 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 
 ---
 
+### FreeRTOS (`third_party/FreeRTOS/`, `config/FreeRTOSConfig.h`)
+
+Vendored FreeRTOS kernel (GCC/ARM_CM4F port, `heap_4` allocator), hand-configured
+for this board rather than generated via CubeMX. Only compiled in when
+`EXAMPLE=freertos_blink` — see [Examples](#examples-examples) below.
+
+- **Clock:** `configCPU_CLOCK_HZ` resolves through `SystemCoreClock`, defined
+  in `drivers/systick/src/systick.c` (16 MHz HSI, no PLL)
+- **Tick rate:** 1000 Hz (1 ms/tick)
+- **Priorities:** `configMAX_PRIORITIES = 2` — Idle at 0, application tasks at 1
+- **Stack overflow detection:** pattern-fill checking (`configCHECK_FOR_STACK_OVERFLOW = 2`);
+  every FreeRTOS-based example must implement `vApplicationStackOverflowHook()`
+
+> The bare-metal `delay()` in the SysTick driver must never be called once
+> `vTaskStartScheduler()` has run — it directly writes SysTick's control
+> register and permanently stops the RTOS tick. Use `vTaskDelay()` /
+> `pdMS_TO_TICKS()` inside FreeRTOS tasks instead.
+
+---
+
 ## Examples (`examples/`)
 
 Each example demonstrates the full driver stack for a specific transport. Select which example to build with the `EXAMPLE` CMake variable (default: `mpu9250_accel_i2c`).
@@ -199,6 +219,10 @@ acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 ### mpu9250_accel_spi_dma
 
 Same accelerometer readout over SPI, using DMA for all transfers. The CPU is free during each SPI transaction and resumes only when the DMA transfer-complete interrupt fires. Initialises UART, SPI, DMA, and MPU-9250 (DMA SPI transport), then continuously burst-reads and prints accelerometer data.
+
+### freertos_blink
+
+First FreeRTOS-based example. A single task blinks LD2 (PA5) once per second via `vTaskDelay()`, demonstrating the minimum setup to run the scheduler on this board — one-time hardware init before `vTaskStartScheduler()`, then control never returns to `main()`. See [`examples/freertos_blink/README.md`](examples/freertos_blink/README.md) for details.
 
 ---
 
@@ -239,7 +263,15 @@ cmake --build build
 # Build the DMA SPI example
 cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma -G "MinGW Makefiles"
 cmake --build build
+
+# Build the FreeRTOS blink example
+cmake -B build -DEXAMPLE=freertos_blink -G "MinGW Makefiles"
+cmake --build build
 ```
+
+> Switching `EXAMPLE` in an existing `build/` directory requires re-running the
+> `cmake -B build -DEXAMPLE=...` configure step, not just `cmake --build build`
+> — otherwise the cached `EXAMPLE` value from the previous configure is used.
 
 Flash via OpenOCD or the VS Code **Run and Debug** panel.
 

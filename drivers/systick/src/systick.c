@@ -5,6 +5,10 @@
 #define CLOCKSRC   (1U << 2)    /* CLKSOURCE: 1 = processor clock */
 #define COUNTFLAG  (1U << 16)   /* Set to 1 when counter wraps to 0 */
 
+/* Real definition backing FreeRTOSConfig.h's `extern uint32_t SystemCoreClock`
+ * (configCPU_CLOCK_HZ). Update this if PLL configuration is ever added. */
+uint32_t SystemCoreClock = 16000000;
+
 /* 16 MHz processor clock / 16 000 ticks = 1 ms period */
 #define LOAD_VALUE  16000U
 

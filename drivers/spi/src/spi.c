@@ -3,12 +3,7 @@
 
 /* RCC clock-enable bits from CMSIS (RM0383 §6.3.10, §6.3.15) */
 
-/* SPI_SR flag bits (RM0383 §20.5.3) */
-#define SPI_SR_TXE   (1U << 1)   /* Transmit buffer empty */
-#define SPI_SR_RXNE  (1U << 0)   /* Receive buffer not empty */
-#define SPI_SR_BSY   (1U << 7)   /* Busy flag */
-
-
+/* SPI_SR flag bits (RM0383 §20.5.3) — SPI_SR_TXE/RXNE/BSY already defined in CMSIS stm32f4xx.h */
 
 void spi_gpio_init(void)
 {
