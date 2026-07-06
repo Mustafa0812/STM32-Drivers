@@ -7,28 +7,28 @@
 
 void spi_gpio_init(void)
 {
-    /* Enable GPIOA clock */
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    /* Enable GPIOB clock */
+    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 
-    /* PA5 (SCK), PA6 (MISO), PA7 (MOSI) → alternate function — MODER bits = 10 */
-    GPIOA->MODER |=  (1U << 11); GPIOA->MODER &= ~(1U << 10); /* PA5 */
-    GPIOA->MODER |=  (1U << 13); GPIOA->MODER &= ~(1U << 12); /* PA6 */
-    GPIOA->MODER |=  (1U << 15); GPIOA->MODER &= ~(1U << 14); /* PA7 */
+    /* PB3 (SCK), PB4 (MISO), PB5 (MOSI) → alternate function — MODER bits = 10 */
+    GPIOB->MODER |=  (1U << 11); GPIOB->MODER &= ~(1U << 10); /* PB5 */
+    GPIOB->MODER |=  (1U << 7); GPIOB->MODER &= ~(1U << 6); /* PB3 */
+    GPIOB->MODER |=  (1U << 9); GPIOB->MODER &= ~(1U << 8); /* PB4 */
 
-    /* Set AF5 (SPI1) on PA5, PA6, PA7 via AFRL (RM0383 Table 9)
+    /* Set AF5 (SPI1) on PB5, PB3, PB4 via AFRL (RM0383 Table 9)
      * Each pin occupies 4 bits in AFR[0]; AF5 = 0101 */
 
-    /* PA5 SCK  — AFR[0][23:20] = 0101 */
-    GPIOA->AFR[0] &= ~(1U << 23); GPIOA->AFR[0] |=  (1U << 22);
-    GPIOA->AFR[0] &= ~(1U << 21); GPIOA->AFR[0] |=  (1U << 20);
+    /* PB5 MOSI  — AFR[0][23:20] = 0101 */
+    GPIOB->AFR[0] &= ~(1U << 23); GPIOB->AFR[0] |=  (1U << 22);
+    GPIOB->AFR[0] &= ~(1U << 21); GPIOB->AFR[0] |=  (1U << 20);
 
-    /* PA6 MISO — AFR[0][27:24] = 0101 */
-    GPIOA->AFR[0] &= ~(1U << 27); GPIOA->AFR[0] |=  (1U << 26);
-    GPIOA->AFR[0] &= ~(1U << 25); GPIOA->AFR[0] |=  (1U << 24);
+    /* PB4 MISO — AFR[0][19:16] = 0101 */
+    GPIOB->AFR[0] &= ~(1U << 17); GPIOB->AFR[0] |=  (1U << 16);
+    GPIOB->AFR[0] &= ~(1U << 19); GPIOB->AFR[0] |=  (1U << 18);
 
-    /* PA7 MOSI — AFR[0][31:28] = 0101 */
-    GPIOA->AFR[0] &= ~(1U << 31); GPIOA->AFR[0] |=  (1U << 30);
-    GPIOA->AFR[0] &= ~(1U << 29); GPIOA->AFR[0] |=  (1U << 28);
+    /* PB3 SCK — AFR[0][15:12] = 0101 */
+    GPIOB->AFR[0] &= ~(1U << 15); GPIOB->AFR[0] |=  (1U << 14);
+    GPIOB->AFR[0] &= ~(1U << 13); GPIOB->AFR[0] |=  (1U << 12);
 }
 
 void spi_init(void)

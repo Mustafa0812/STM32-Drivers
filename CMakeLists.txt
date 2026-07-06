@@ -36,6 +36,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=bmp390_temp_i2c
 #   cmake -B build -DEXAMPLE=pwm_led
 #   cmake -B build -DEXAMPLE=freertos_blink
+#   cmake -B build -DEXAMPLE=freertos_sensor_blink
 set(EXAMPLE "mpu9250_accel_i2c" CACHE STRING "Example folder under examples/ to build")
 
 # Peripheral bus drivers — always compiled
@@ -60,12 +61,14 @@ elseif(EXAMPLE STREQUAL "mpu9250_accel_spi_dma")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
 elseif(EXAMPLE STREQUAL "bmp390_temp_i2c")
     set(DEVICE_SOURCES "drivers/bmp390/src/bmp390.c")
+elseif(EXAMPLE STREQUAL "freertos_sensor_blink")
+    set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
 endif()
 
-# FreeRTOS kernel — only compiled for the freertos_blink example, so bare-metal
+# FreeRTOS kernel — only compiled for FreeRTOS-based examples, so bare-metal
 # examples never need to provide FreeRTOS-only callbacks like
 # vApplicationStackOverflowHook.
-if(EXAMPLE STREQUAL "freertos_blink")
+if(EXAMPLE STREQUAL "freertos_blink" OR EXAMPLE STREQUAL "freertos_sensor_blink")
     file(GLOB_RECURSE RTOS_SOURCES "third_party/FreeRTOS/*.c")
     set(RTOS_INC_DIRS
         third_party/FreeRTOS/include

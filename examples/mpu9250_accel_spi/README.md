@@ -9,11 +9,9 @@ Reads X, Y, Z accelerometer axes from an MPU-9250 over SPI1 and prints the resul
 | 3.3V | VCC | |
 | GND | GND | |
 | PA4 | NCS | Software chip-select (active-low) |
-| PA5 | SCL/CLK | SPI1 SCK (AF5) |
-| PA6 | SDA/SDO | SPI1 MISO (AF5) |
-| PA7 | SDI | SPI1 MOSI (AF5) |
-
-> PA5 is shared with the Nucleo-64 on-board LED (LD2). Do not use the LED while SPI is active.
+| PB3 | SCL/CLK | SPI1 SCK (AF5) |
+| PB4 | SDA/SDO | SPI1 MISO (AF5) |
+| PB5 | SDI | SPI1 MOSI (AF5) |
 
 ## Build and Flash
 
@@ -38,7 +36,7 @@ If `WHO_AM_I` reads `0x00` or `0xFF`, check wiring — the device is not respond
 ## Initialisation Sequence
 
 1. `uart_init()` — USART2 TX on PA2, 115200 baud
-2. `spi_gpio_init()` — configures PA5/PA6/PA7 as AF5
+2. `spi_gpio_init()` — configures PB3/PB4/PB5 as AF5
 3. `spi_init()` — enables SPI1; Mode 0, 8-bit, fPCLK/32 ≈ 500 kHz
 4. `mpu_init()` — configures PA4 as CS; wakes MPU-9250; sets ±4 g range
 5. Reads WHO_AM_I register once, then continuous burst-read of 6 bytes from `ACCEL_XOUT_H` (0x3B)

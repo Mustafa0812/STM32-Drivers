@@ -18,9 +18,9 @@ Controls the Nucleo-64 on-board LED (PA5) and user button (PC13).
 
 ---
 
-### EXTI (`drivers/exti/`)
+### EXTI (`drivers/gpio/src/gpio_it.c`)
 
-Interrupt-driven GPIO input driver for the Nucleo-64 user button (PC13), using EXTI line 13 with a falling-edge trigger.
+Interrupt-driven GPIO input, part of the GPIO driver (declared in `gpio.h` alongside the polling functions). Configures EXTI line 13 for the Nucleo-64 user button (PC13) with a falling-edge trigger.
 
 A callback function is registered with `exti_register_callback()` before the interrupt is enabled. Any `void fn(void)` function can be passed, so different actions can be triggered by the same button press without modifying the driver — swap the callback to change the behaviour.
 
@@ -56,9 +56,9 @@ Full-duplex SPI1 master driver. Chip-select is managed by the device driver (PA4
 
 | Pin | Signal |
 |---|---|
-| PA5 | SCK |
-| PA6 | MISO |
-| PA7 | MOSI |
+| PB3 | SCK |
+| PB4 | MISO |
+| PB5 | MOSI |
 
 - **Mode:** 0 (CPOL=0, CPHA=0), MSB-first, 8-bit
 - **Clock:** fPCLK/32 ≈ 500 kHz at 16 MHz
@@ -66,11 +66,12 @@ Full-duplex SPI1 master driver. Chip-select is managed by the device driver (PA4
 
 | Function | Description |
 |---|---|
-| `spi_gpio_init()` | Configures PA5/6/7 as AF5 |
+| `spi_gpio_init()` | Configures PB3/4/5 as AF5 |
 | `spi_init()` | Enables SPI1 clock; configures CR1; enables SPE |
 | `spi_transceive(data)` | Blocking full-duplex transfer; returns received byte |
 
 > Blocking/polling only. CS is the responsibility of the device driver. For DMA-based transfers see the DMA SPI driver below.
+> Uses SPI1's alternate pin set (PB3/4/5) rather than the default (PA5/6/7) so PA5 stays free for the on-board LED (LD2) — see [Pin Summary](#pin-summary).
 
 ---
 
@@ -168,8 +169,9 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 ### FreeRTOS (`third_party/FreeRTOS/`, `config/FreeRTOSConfig.h`)
 
 Vendored FreeRTOS kernel (GCC/ARM_CM4F port, `heap_4` allocator), hand-configured
-for this board rather than generated via CubeMX. Only compiled in when
-`EXAMPLE=freertos_blink` — see [Examples](#examples-examples) below.
+for this board rather than generated via CubeMX. Only compiled in for
+FreeRTOS-based examples (`freertos_blink`, `freertos_sensor_blink`) — see
+[Examples](#examples-examples) below.
 
 - **Clock:** `configCPU_CLOCK_HZ` resolves through `SystemCoreClock`, defined
   in `drivers/systick/src/systick.c` (16 MHz HSI, no PLL)
@@ -203,7 +205,7 @@ Initialises UART, I2C, and MPU-9250 (I2C transport), then continuously burst-rea
 acc_x : -193 mg  acc_y : -760 mg  acc_z : 355 mg
 ```
 
-![I2C Accelerometer Readings](images/I2C%20READINGS.png)
+![I2C Accelerometer Readings](images/i2c_readings.png)
 
 ### mpu9250_accel_spi
 
@@ -214,7 +216,7 @@ WHO_AM_I: 0x71 (expect 0x71)
 acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 ```
 
-![SPI Accelerometer Readings](images/Accelerometer%20Readings.png)
+![SPI Accelerometer Readings](images/accelerometer_readings.png)
 
 ### mpu9250_accel_spi_dma
 
@@ -224,6 +226,10 @@ Same accelerometer readout over SPI, using DMA for all transfers. The CPU is fre
 
 First FreeRTOS-based example. A single task blinks LD2 (PA5) once per second via `vTaskDelay()`, demonstrating the minimum setup to run the scheduler on this board — one-time hardware init before `vTaskStartScheduler()`, then control never returns to `main()`. See [`examples/freertos_blink/README.md`](examples/freertos_blink/README.md) for details.
 
+### freertos_sensor_blink
+
+Two equal-priority tasks running concurrently: `led_blink` toggles LD2 (PA5) once per second, and `mpu_main` continuously burst-reads the MPU-9250 accelerometer over SPI1+DMA and prints milli-g values over UART, each on its own `vTaskDelay()`. Demonstrates round-robin scheduling between independent tasks with no shared state. SPI1 uses its alternate pin set (PB3/4/5) instead of the default (PA5/6/7) so LD2 (PA5) is free for the blink task — see [`examples/freertos_sensor_blink/README.md`](examples/freertos_sensor_blink/README.md) for details.
+
 ---
 
 ## Pin Summary
@@ -232,14 +238,15 @@ First FreeRTOS-based example. A single task blinks LD2 (PA5) once per second via
 |---|---|---|
 | PA2 | USART2 | TX (AF7) |
 | PA4 | SPI1 / MPU-9250 | Software CS (active-low) |
-| PA5 | SPI1 / LED | SCK (AF5) / LD2 output |
-| PA6 | SPI1 | MISO (AF5) |
-| PA7 | SPI1 | MOSI (AF5) |
+| PA5 | LED | LD2 output |
+| PB3 | SPI1 | SCK (AF5) |
+| PB4 | SPI1 | MISO (AF5) |
+| PB5 | SPI1 | MOSI (AF5) |
 | PB8 | I2C1 | SCL (AF4) |
 | PB9 | I2C1 | SDA (AF4) |
 | PC13 | — | User button input (active-low) |
 
-> PA5 is shared between the on-board LED and SPI1 SCK. Do not use both simultaneously.
+> SPI1 uses its alternate pin set (PB3/4/5, AF5) rather than the default (PA5/6/7) specifically so PA5 stays dedicated to the on-board LED (LD2) — the two no longer conflict.
 
 ---
 
@@ -266,6 +273,10 @@ cmake --build build
 
 # Build the FreeRTOS blink example
 cmake -B build -DEXAMPLE=freertos_blink -G "MinGW Makefiles"
+cmake --build build
+
+# Build the FreeRTOS sensor + blink example
+cmake -B build -DEXAMPLE=freertos_sensor_blink -G "MinGW Makefiles"
 cmake --build build
 ```
 

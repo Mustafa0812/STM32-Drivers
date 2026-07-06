@@ -79,7 +79,6 @@ int main(void) {
 
 ## Limitations
 
-- **PA5 shared with SPI1 SCK** — do not use `led_on()`/`led_off()` while SPI1 is active
 - **Polling has no debounce** — `btn_state()` reads the raw IDR
 - **Interrupt hardcoded to EXTI13 / PC13** — not configurable without modifying `gpio_it.c`
 - **Single callback** — only one function can be registered at a time

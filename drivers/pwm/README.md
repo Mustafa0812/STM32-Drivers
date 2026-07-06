@@ -45,4 +45,4 @@ Call `set_duty_cycle()` again at any time (e.g. in the main loop) to change brig
 
 - **Hardcoded to TIM2 CH1 / PA5** — not configurable for other timers/channels without modifying `pwm_init()`
 - **`duty` must be 0–100** — no bounds checking; values outside this range give a `CCR1` outside `ARR`, i.e. output always high
-- **PA5 shared with SPI1 SCK and the GPIO LED driver** — do not use alongside `led_on()`/`led_off()` or SPI1
+- **PA5 shared with the GPIO LED driver** — do not use alongside `led_on()`/`led_off()` (both drive the same pin)
