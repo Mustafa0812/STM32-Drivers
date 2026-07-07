@@ -21,6 +21,7 @@ void exti_init(void){
     EXTI->RTSR &= ~(1U << 13);           /* RM0383 §12.3.3 — ensure rising edge off */
     EXTI->FTSR |=  (1U << 13);           /* RM0383 §12.3.4 — falling edge trigger */
 
+    NVIC_SetPriority(EXTI15_10_IRQn, 5);
     NVIC_EnableIRQ(EXTI15_10_IRQn);
 
     __enable_irq();

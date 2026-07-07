@@ -41,7 +41,7 @@ Configures EXTI line 13 (PC13) with a falling-edge trigger. A callback function 
 | Function | Description |
 |---|---|
 | `exti_register_callback(cb)` | Registers `cb` as the function called on each button press |
-| `exti_init()` | Enables SYSCFG clock; maps PC13 to EXTI13; sets falling-edge trigger; enables NVIC |
+| `exti_init()` | Enables SYSCFG clock; maps PC13 to EXTI13; sets falling-edge trigger; sets NVIC priority to 5; enables NVIC |
 
 ### Usage
 
@@ -75,6 +75,8 @@ int main(void) {
 
 > `btn_init()` must be called before `exti_init()` to configure PC13 as an input.
 
+> The NVIC priority is fixed at `5` — this satisfies `configMAX_SYSCALL_INTERRUPT_PRIORITY` in `config/FreeRTOSConfig.h`, so it's safe for a registered callback to call FreeRTOS ISR-safe functions (e.g. `vTaskNotifyGiveFromISR`) on FreeRTOS-based examples. See `examples/freertos_button_preempt` for a real use of this.
+
 ---
 
 ## Limitations
@@ -83,4 +85,4 @@ int main(void) {
 - **Interrupt hardcoded to EXTI13 / PC13** — not configurable without modifying `gpio_it.c`
 - **Single callback** — only one function can be registered at a time
 - **No debounce on interrupt** — mechanical bounce can fire the ISR multiple times per press
-- **No NVIC priority configuration**
+- **NVIC priority hardcoded to 5** — not configurable without modifying `gpio_it.c`

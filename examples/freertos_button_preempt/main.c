@@ -9,9 +9,24 @@
 #include <stdio.h>
 
 uint8_t data_buffer[6];
+TaskHandle_t button_task_handle;
 
-/* Toggles LD2 (PA5) on a 1 Hz cycle. Equal priority with mpu_main — the
- * scheduler round-robins between them; neither can starve the other. */
+/* Runs in interrupt context (registered with exti_register_callback).
+ * Must not touch task logic directly — it only signals button_task via a
+ * task notification, the FreeRTOS-safe way to wake a task from an ISR. */
+void callback_function(void)
+{
+    BaseType_t xHigherPriorityWasWoken = pdFALSE;
+
+    vTaskNotifyGiveFromISR(button_task_handle, &xHigherPriorityWasWoken);
+
+    /* If button_task (priority 2) outranks whatever was running, this
+     * forces the context switch immediately instead of waiting up to one
+     * tick period for the scheduler to notice on its own. */
+    portYIELD_FROM_ISR(xHigherPriorityWasWoken);
+}
+
+/* Equal priority with mpu_main — round-robin, neither can starve the other. */
 void led_blink(void *pvParameters)
 {
     (void)pvParameters;
@@ -25,8 +40,6 @@ void led_blink(void *pvParameters)
     }
 }
 
-/* Burst-reads the MPU-9250 accelerometer over SPI1+DMA and prints milli-g
- * values over UART, independent of led_blink's own timing. */
 void mpu_main(void *pvParameters)
 {
     (void)pvParameters;
@@ -54,6 +67,27 @@ void mpu_main(void *pvParameters)
     }
 }
 
+/* Priority 2 — higher than led_blink/mpu_main (priority 1) and Idle
+ * (priority 0). Sits Blocked (zero CPU) until the button ISR notifies it,
+ * then preempts whichever of the other two tasks was running. */
+void button_task(void *pvParameters)
+{
+    (void)pvParameters;
+
+    for (;;)
+    {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        for (int i = 0; i < 3; i++)
+        {
+            led_on();
+            vTaskDelay(pdMS_TO_TICKS(100));
+            led_off();
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
+}
+
 int main(void)
 {
     led_init();
@@ -62,9 +96,17 @@ int main(void)
     spi_init();
     dma2_init();    /* must come after spi_init — SPI1 clock must be on before CR2 is touched */
     mpu_init();
+    btn_init();
+
+    /* Register the callback before arming the interrupt — exti_init() makes
+     * EXTI13 live immediately, and a press before registration would call a
+     * NULL callback (silently ignored, but the press is lost). */
+    exti_register_callback(callback_function);
+    exti_init();
 
     xTaskCreate(led_blink, "BLINK LED", 128, NULL, 1, NULL);
     xTaskCreate(mpu_main, "READ SENSOR", 512, NULL, 1, NULL);
+    xTaskCreate(button_task, "BUTTON TASK", 128, NULL, 2, &button_task_handle);
 
     vTaskStartScheduler();
 

@@ -47,8 +47,7 @@ openocd -f openocd.cfg -c "program build/stm32_drivers.hex verify reset exit"
 ## Expected Behaviour
 
 LD2 blinks on/off every second, independent of the accelerometer readings
-scrolling over UART (115200 baud, 8N1, ST-LINK COM port) roughly once per
-second:
+scrolling over UART (115200 baud, 8N1, ST-LINK COM port) roughly every 200 ms:
 
 ```
 raw: 00 60 FF F8 3F 00
@@ -57,9 +56,13 @@ acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 
 ## Notes
 
-- Both tasks are created at priority `1` (see `config/FreeRTOSConfig.h`,
-  `configMAX_PRIORITIES = 2`) — genuinely equal, round-robin scheduling, not
-  preemption. To make one task able to interrupt the other, `configMAX_PRIORITIES`
-  would need raising and one task moved to a higher priority level.
+- Both tasks are created at priority `1` — genuinely equal, round-robin
+  scheduling, not preemption. For a task that actually preempts these two
+  (button-triggered, higher priority), see
+  [`examples/freertos_button_preempt`](../freertos_button_preempt/README.md).
+- `config/FreeRTOSConfig.h`'s `configMAX_PRIORITIES = 3` is shared across all
+  FreeRTOS examples in this repo — this example only uses priorities `0`
+  (Idle) and `1`, but the config also has to satisfy `freertos_button_preempt`,
+  which needs priority `2`.
 - `vApplicationStackOverflowHook()` reports over UART via `printf` (already
   retargeted through `__io_putchar`), same as `freertos_blink`.

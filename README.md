@@ -170,13 +170,16 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 
 Vendored FreeRTOS kernel (GCC/ARM_CM4F port, `heap_4` allocator), hand-configured
 for this board rather than generated via CubeMX. Only compiled in for
-FreeRTOS-based examples (`freertos_blink`, `freertos_sensor_blink`) — see
-[Examples](#examples-examples) below.
+FreeRTOS-based examples (`freertos_blink`, `freertos_sensor_blink`,
+`freertos_button_preempt`) — see [Examples](#examples-examples) below.
 
 - **Clock:** `configCPU_CLOCK_HZ` resolves through `SystemCoreClock`, defined
   in `drivers/systick/src/systick.c` (16 MHz HSI, no PLL)
 - **Tick rate:** 1000 Hz (1 ms/tick)
-- **Priorities:** `configMAX_PRIORITIES = 2` — Idle at 0, application tasks at 1
+- **Priorities:** `configMAX_PRIORITIES = 3` — Idle (0), `freertos_blink`/
+  `freertos_sensor_blink` tasks (1), `freertos_button_preempt`'s button task (2).
+  This one config is shared across all FreeRTOS examples in this repo, so it
+  covers the highest priority any of them needs.
 - **Stack overflow detection:** pattern-fill checking (`configCHECK_FOR_STACK_OVERFLOW = 2`);
   every FreeRTOS-based example must implement `vApplicationStackOverflowHook()`
 
@@ -230,6 +233,10 @@ First FreeRTOS-based example. A single task blinks LD2 (PA5) once per second via
 
 Two equal-priority tasks running concurrently: `led_blink` toggles LD2 (PA5) once per second, and `mpu_main` continuously burst-reads the MPU-9250 accelerometer over SPI1+DMA and prints milli-g values over UART, each on its own `vTaskDelay()`. Demonstrates round-robin scheduling between independent tasks with no shared state. SPI1 uses its alternate pin set (PB3/4/5) instead of the default (PA5/6/7) so LD2 (PA5) is free for the blink task — see [`examples/freertos_sensor_blink/README.md`](examples/freertos_sensor_blink/README.md) for details.
 
+### freertos_button_preempt
+
+Builds on `freertos_sensor_blink`'s two round-robin tasks and adds a third, higher-priority task woken by the user button's interrupt via a FreeRTOS task notification (`ulTaskNotifyTake` / `vTaskNotifyGiveFromISR` / `portYIELD_FROM_ISR`) — demonstrating genuine preemption rather than round-robin time-slicing. Pressing the button interrupts whichever background task was running and flashes LD2 rapidly before both resume. See [`examples/freertos_button_preempt/README.md`](examples/freertos_button_preempt/README.md) for details, including the NVIC-priority safety requirement for ISRs that call FreeRTOS API functions.
+
 ---
 
 ## Pin Summary
@@ -277,6 +284,10 @@ cmake --build build
 
 # Build the FreeRTOS sensor + blink example
 cmake -B build -DEXAMPLE=freertos_sensor_blink -G "MinGW Makefiles"
+cmake --build build
+
+# Build the FreeRTOS button preemption example
+cmake -B build -DEXAMPLE=freertos_button_preempt -G "MinGW Makefiles"
 cmake --build build
 ```
 
