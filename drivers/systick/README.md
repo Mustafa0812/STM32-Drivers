@@ -1,6 +1,6 @@
 # SysTick Driver
 
-Blocking millisecond delay using the Cortex-M4 SysTick timer. Each call configures and starts the timer, polls the COUNTFLAG for each millisecond tick, then stops the counter on exit.
+Free-running millisecond tick counter and blocking delay, both built on the Cortex-M4 SysTick timer. `start_timer()` configures and starts SysTick once; `delay()` and `get_tick()` both read the resulting tick count without touching SysTick's configuration again.
 
 ## Configuration
 
@@ -9,26 +9,35 @@ Blocking millisecond delay using the Cortex-M4 SysTick timer. Each call configur
 | Clock source | Processor clock (16 MHz HSI) |
 | Resolution | 1 ms |
 | LOAD value | 15999 (16 000 ticks − 1) |
+| Interrupt | `SysTick_Handler`, increments the tick counter every 1 ms |
 
 ## Functions
 
 | Function | Description |
 |---|---|
-| `delay(ms)` | Blocks for `ms` milliseconds; stops the SysTick counter on return |
+| `start_timer()` | Configures SysTick for a 1 ms period with `TICKINT` enabled and starts the counter. Call exactly once, before any `delay()` or `get_tick()` use. |
+| `delay(ms)` | Blocks by polling `get_tick()` until `ms` milliseconds have elapsed. Does not reconfigure or stop SysTick — safe to call repeatedly without disturbing the running tick count. |
+| `get_tick()` | Returns the free-running millisecond count since `start_timer()` was called. |
 
 ## Usage
 
 ```c
 #include "systick.h"
 
-delay(500);    /* block for 500 ms */
-```
+int main(void)
+{
+    start_timer();   /* once, before any delay()/get_tick() use */
 
-No initialisation call needed — `delay()` configures SysTick on every call.
+    uint32_t t0 = get_tick();
+    /* ... work ... */
+    uint32_t elapsed_ms = get_tick() - t0;
+
+    delay(500);       /* block for 500 ms */
+}
+```
 
 ## Limitations
 
-- **Blocking** — the CPU stalls for the full duration; no other work can run during the delay
-- **No tick counter** — there is no `get_tick()` or elapsed-time API; you cannot measure time between events
-- **Reconfigures SysTick on every call** — if SysTick is used elsewhere (e.g. an RTOS tick), this driver will conflict
-- **Do not call from an ISR** — blocking inside an interrupt handler stalls the system for the delay duration
+- **`start_timer()` must be called first** — `delay()` and `get_tick()` both assume SysTick is already running; calling them beforehand returns/waits on a tick count that never advances.
+- **Single owner of SysTick** — this driver assumes exclusive use of the SysTick peripheral. It must not be used alongside another SysTick consumer (e.g. an RTOS tick) without coordinating configuration; see the FreeRTOS section in the top-level README.
+- **`delay()` still blocks the CPU** — no other work can run during the wait; it is not interrupt-driven from the caller's perspective.

@@ -7,7 +7,10 @@
       "Bash(rm -f /tmp/mathtest.c /tmp/mathtest.o /tmp/mathtest.elf)",
       "Bash(find \"/c/Program Files \\(x86\\)/GNU Arm Embedded Toolchain\" -iname \"math.h\" 2>/dev/null)",
       "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/**)",
-      "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/10 2021.10/arm-none-eabi/include/**)"
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/10 2021.10/arm-none-eabi/include/**)",
+      "Bash(cmake -B build -DEXAMPLE=mpu_gyro_spi_dma)",
+      "Bash(ls drivers/bmp390/)",
+      "Bash(ls drivers/bmp390/README.md)"
     ]
   }
 }

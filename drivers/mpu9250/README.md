@@ -1,6 +1,6 @@
 # MPU-9250 Driver
 
-Accelerometer driver for the InvenSense MPU-9250 IMU. Two transport implementations are provided — SPI and I2C — with the same initialisation and read interface. Only the accelerometer axes are read; the gyroscope is enabled but not used, and the magnetometer (AK8963) is not supported.
+Accelerometer/gyroscope driver for the InvenSense MPU-9250 IMU. Two transport implementations are provided — SPI and I2C — with the same initialisation and read interface. The magnetometer (AK8963) is not supported.
 
 ## Initialisation Settings
 
@@ -9,6 +9,7 @@ Accelerometer driver for the InvenSense MPU-9250 IMU. Two transport implementati
 | PWR_MGMT_1 (0x6B) | 0x00 | Wake from sleep; use internal oscillator |
 | PWR_MGMT_2 (0x6C) | 0x00 | Enable all accelerometer and gyro axes |
 | ACCEL_CONFIG (0x1C) | 0x08 | Full-scale range ±4 g (8192 LSB/g) |
+| GYRO_CONFIG (0x1B) | 0x00 | Full-scale range ±250 °/s (131 LSB/°/s) — DMA SPI transport only |
 
 ---
 
@@ -21,9 +22,11 @@ Uses SPI1 via the SPI bus driver. Bit 7 of the address byte selects read (1) or 
 | Pin | Signal |
 |---|---|
 | PA4 | CS (software, active-low) |
-| PA5 | SCK |
-| PA6 | MISO |
-| PA7 | MOSI |
+| PB3 | SPI1 SCK (AF5) |
+| PB4 | SPI1 MISO (AF5) |
+| PB5 | SPI1 MOSI (AF5) |
+
+> SPI1 uses its alternate pin set (PB3/4/5) rather than the default (PA5/6/7) so PA5 stays free for the on-board LED — see the top-level [Pin Summary](../../README.md#pin-summary).
 
 ### Functions
 
@@ -124,12 +127,35 @@ int16_t acc_z = (int16_t)((uint16_t)buf[4] << 8 | buf[5]);
 int32_t acc_xmg = (int32_t)acc_x * 1000 / 8192;  /* ±4 g → 8192 LSB/g */
 ```
 
+Roll/pitch tilt angle from the accelerometer alone (see `examples/mpu9250_accel_spi_dma/main.c`):
+
+```c
+float roll_denom  = sqrtf((acc_xmg * acc_xmg) + (acc_zmg * acc_zmg));
+float pitch_denom = sqrtf((acc_ymg * acc_ymg) + (acc_zmg * acc_zmg));
+
+float roll_angle  = atan2f(acc_ymg, roll_denom)        * (180.0f / 3.142f);
+float pitch_angle = atan2f(-1 * acc_xmg, pitch_denom)  * (180.0f / 3.142f);
+```
+
+---
+
+## Reading Gyroscope Data
+
+There is no dedicated gyro-read function — burst-read 6 bytes from `GYRO_XOUT_H` (0x43) the same way as `ACCEL_XOUT_H`, then convert to °/s using the configured sensitivity (131 LSB/°/s at ±250 °/s, DMA SPI transport only):
+
+```c
+int16_t gyro_x = (int16_t)((uint16_t)buf[0] << 8 | buf[1]);
+float roll_rate = (float)gyro_x / 131.0f;   /* °/s */
+```
+
+Integrating `roll_rate` over a measured `dt` (see the SysTick driver's `get_tick()`) gives an angle estimate, but one that drifts over time from gyro bias — see `examples/mpu_gyro_spi_dma/main.c`.
+
 ---
 
 ## Limitations
 
-- **Accelerometer only** — gyroscope axes are enabled but no read functions are provided
 - **No magnetometer** — the AK8963 onboard magnetometer is not initialised or accessible
 - **No FIFO** — data is read directly from output registers; no buffering
 - **No data-ready interrupt** — reads are polled; there is no DRDY pin handling
 - **SPI and I2C APIs differ** — `mpu_burst_read` takes a `length` parameter in the SPI transport but reads a fixed 6 bytes in the I2C transport; they are not drop-in replacements for each other
+- **Gyro range only configured in the DMA SPI transport** — the plain SPI and I2C transports never write `GYRO_CONFIG`, so gyro reads through them use the device's power-on-default sensitivity unless configured manually

@@ -119,31 +119,35 @@ I2C1 master driver on PB8 (SCL) and PB9 (SDA), configured for standard mode (100
 
 ### SysTick (`drivers/systick/`)
 
-Blocking millisecond delay using the Cortex-M4 SysTick timer.
+Free-running millisecond tick counter and blocking delay, both built on the Cortex-M4 SysTick timer.
 
 - **Clock source:** Processor clock (16 MHz)
 - **Resolution:** 1 ms (LOAD = 15999)
 
 | Function | Description |
 |---|---|
-| `delay(ms)` | Blocks for the given number of milliseconds; stops counter on exit |
+| `start_timer()` | Configures SysTick for a 1 ms period and starts it, with `TICKINT` enabled; call once from `main()` before any `delay()` or `get_tick()` use |
+| `delay(ms)` | Blocks for the given number of milliseconds, measured against `get_tick()` — does not reconfigure or stop SysTick |
+| `get_tick()` | Returns the free-running millisecond count since `start_timer()` was called |
+| `SysTick_Handler()` | ISR that increments the tick counter every 1 ms |
 
-> Polling only — no tick counter or elapsed-time API.
+> `start_timer()` must be called exactly once, before any use of `delay()` or `get_tick()`. Unlike the old polling-only design, `delay()` no longer owns SysTick's configuration — it just waits on `get_tick()` — so the tick counter keeps running continuously across the whole program.
 
 ---
 
 ### MPU-9250 (`drivers/mpu9250/`)
 
-Accelerometer driver for the InvenSense MPU-9250. Two transport implementations are provided — SPI and I2C — sharing the same function interface.
+Accelerometer/gyroscope driver for the InvenSense MPU-9250. Two transport implementations are provided — SPI and I2C — sharing the same function interface.
 
 **Initialisation settings (both transports):**
 - Wakes device from sleep (PWR_MGMT_1 = 0x00)
 - Enables all accelerometer and gyro axes (PWR_MGMT_2 = 0x00)
 - Sets accelerometer full-scale range to ±4 g (8192 LSB/g)
+- DMA SPI transport also sets gyro full-scale range to ±250 °/s (131 LSB/°/s)
 
 #### SPI transport (`mpu9250_spi.c / mpu9250_spi.h`)
 
-Implements the MPU-9250 SPI protocol: bit 7 of the address byte selects read (1) or write (0); burst reads auto-increment the register address. CS is managed on PA4.
+Implements the MPU-9250 SPI protocol: bit 7 of the address byte selects read (1) or write (0); burst reads auto-increment the register address. CS is managed on PA4; SCK/MISO/MOSI use SPI1's alternate pin set (PB3/4/5) — see [Pin Summary](#pin-summary).
 
 | Function | Description |
 |---|---|
@@ -151,6 +155,8 @@ Implements the MPU-9250 SPI protocol: bit 7 of the address byte selects read (1)
 | `mpu_read_reg(reg)` | Single register read; returns the byte |
 | `mpu_write(reg, data)` | Writes one byte to a register |
 | `mpu_burst_read(reg, length, buffer)` | Reads `length` bytes starting at `reg` into `buffer` |
+
+There is no dedicated gyro-read function — call `mpu_burst_read(GYRO_XOUT_H, 6, buffer)` the same way as for `ACCEL_XOUT_H`.
 
 #### I2C transport (`mpu9250_i2c.c / mpu9250_i2c.h`)
 
@@ -162,7 +168,26 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 | `mpu_write(reg, data)` | Writes one byte to a register |
 | `mpu_burst_read(reg, buffer)` | Reads 6 bytes starting at `reg` into `buffer` |
 
-> Gyro axes are enabled but not read. No magnetometer (AK8963) support.
+> No magnetometer (AK8963) support.
+
+---
+
+### PWM (`drivers/pwm/`)
+
+Two independent PWM drivers sharing one header (`pwm.h`) — see [`drivers/pwm/README.md`](drivers/pwm/README.md) for full detail.
+
+| Driver | Timer/Pins | Purpose |
+|---|---|---|
+| `pwm_led.c` | TIM2 CH1, PA5 | Dims/brightens the on-board LED (LD2) |
+| `quad_pwm.c` | TIM4 CH1-4, PB6/PB7/PB8/PB9 | General-purpose 4-channel PWM for motor/ESC control; caller picks channel and duty per call |
+
+| Function | Description |
+|---|---|
+| `pwm_init(prescaler)` / `quad_pwm_init(prescaler)` | Configures clocks, GPIO alternate function, and PWM mode 1 for the respective timer |
+| `set_duty_cycle(duty, period)` / `quad_pwm_set_duty(duty, period, channel)` | Sets period (`ARR`) and duty (`CCRx`, 0–100%) |
+| `pwm_start()` / `quad_pwm_start()` | Enables the channel output(s) and starts the counter |
+
+> `quad_pwm`'s 4 channels share one counter/prescaler/period — only duty is independent per channel. `PB6-9` are dedicated to `quad_pwm`; see [Pin Summary](#pin-summary).
 
 ---
 
@@ -223,7 +248,24 @@ acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
 
 ### mpu9250_accel_spi_dma
 
-Same accelerometer readout over SPI, using DMA for all transfers. The CPU is free during each SPI transaction and resumes only when the DMA transfer-complete interrupt fires. Initialises UART, SPI, DMA, and MPU-9250 (DMA SPI transport), then continuously burst-reads and prints accelerometer data.
+Same accelerometer readout over SPI, using DMA for all transfers. The CPU is free during each SPI transaction and resumes only when the DMA transfer-complete interrupt fires. Also computes roll/pitch tilt angles from the accelerometer via `atan2f`, converted from radians to degrees. Initialises UART, SPI, DMA, and MPU-9250 (DMA SPI transport), then continuously burst-reads accelerometer data and prints milli-g values plus roll/pitch angles.
+
+```
+acc_x : 12 mg  acc_y : -8 mg  acc_z : 998 mg
+roll_angle: 2 degrees   pitch angle: -1 degrees
+```
+
+> Requires linking against `libm` (`-lm`) for `atan2f`/`sqrtf`, and `-Wl,-u,_printf_float` for `%f`/float printf support under newlib-nano — both already set in `CMakeLists.txt`.
+
+See [`examples/mpu9250_accel_spi_dma/README.md`](examples/mpu9250_accel_spi_dma/README.md) for details.
+
+### mpu_gyro_spi_dma
+
+Reads the MPU-9250 gyroscope (±250 °/s, 131 LSB/°/s) over SPI+DMA and integrates angular rate over time (`angle += rate × dt`) to estimate roll/pitch/yaw, using `get_tick()`/`start_timer()` from the SysTick driver to measure `dt` between samples. Demonstrates gyro-only orientation tracking and its core limitation — bias drift accumulates steadily even when stationary, which is why this is a stepping stone toward a complementary filter combining gyro and accelerometer data. See [`examples/mpu_gyro_spi_dma/README.md`](examples/mpu_gyro_spi_dma/README.md) for details.
+
+### pwm_led
+
+Drives the on-board LED (LD2, PA5) at a fixed, reduced brightness (25% duty cycle) via TIM2 Channel 1 PWM instead of simple digital on/off — demonstrates the `pwm_led.c` driver. See [`examples/pwm_led/README.md`](examples/pwm_led/README.md) for details.
 
 ### freertos_blink
 
@@ -245,15 +287,18 @@ Builds on `freertos_sensor_blink`'s two round-robin tasks and adds a third, high
 |---|---|---|
 | PA2 | USART2 | TX (AF7) |
 | PA4 | SPI1 / MPU-9250 | Software CS (active-low) |
-| PA5 | LED | LD2 output |
+| PA5 | LED / TIM2_CH1 | LD2 output (digital or PWM via `pwm_led.c`) |
 | PB3 | SPI1 | SCK (AF5) |
 | PB4 | SPI1 | MISO (AF5) |
 | PB5 | SPI1 | MOSI (AF5) |
-| PB8 | I2C1 | SCL (AF4) |
-| PB9 | I2C1 | SDA (AF4) |
+| PB6 | TIM4_CH1 | `quad_pwm` channel 1 (AF2) |
+| PB7 | TIM4_CH2 | `quad_pwm` channel 2 (AF2) |
+| PB8 | TIM4_CH3 / I2C1 | `quad_pwm` channel 3 (AF2), or I2C1 SCL (AF4) — not used simultaneously |
+| PB9 | TIM4_CH4 / I2C1 | `quad_pwm` channel 4 (AF2), or I2C1 SDA (AF4) — not used simultaneously |
 | PC13 | — | User button input (active-low) |
 
 > SPI1 uses its alternate pin set (PB3/4/5, AF5) rather than the default (PA5/6/7) specifically so PA5 stays dedicated to the on-board LED (LD2) — the two no longer conflict.
+> PB8/PB9 are shared between `quad_pwm` (TIM4 CH3/CH4) and I2C1 — only use one at a time.
 
 ---
 
@@ -276,6 +321,14 @@ cmake --build build
 
 # Build the DMA SPI example
 cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma -G "MinGW Makefiles"
+cmake --build build
+
+# Build the gyro integration example
+cmake -B build -DEXAMPLE=mpu_gyro_spi_dma -G "MinGW Makefiles"
+cmake --build build
+
+# Build the PWM LED example
+cmake -B build -DEXAMPLE=pwm_led -G "MinGW Makefiles"
 cmake --build build
 
 # Build the FreeRTOS blink example
