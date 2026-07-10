@@ -26,7 +26,9 @@ set(CMAKE_EXE_LINKER_FLAGS
     -Wl,--gc-sections \
     -Wl,-Map=output.map \
     --specs=nano.specs \
-    --specs=nosys.specs")
+    --specs=nosys.specs \
+    -Wl,-u,_printf_float \
+    -lm")
 
 # Select which example to build:
 #   cmake -B build -DEXAMPLE=led

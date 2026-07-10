@@ -54,4 +54,5 @@ void mpu_init(void)
     delay(6);
     mpu_write(POWER_MANAGEMENT2, 0x00);
     mpu_write(ACCEL_CONFIG,      0x08);
+    mpu_write(GYRO_CONFIG,      0x08);
 }

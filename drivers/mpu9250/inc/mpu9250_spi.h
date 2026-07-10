@@ -7,8 +7,10 @@
 #define POWER_MANAGEMENT   0x6B
 #define POWER_MANAGEMENT2  0x6C
 #define ACCEL_CONFIG       0x1C
+#define GYRO_CONFIG       0x1B
 #define ACCEL_CONFIG2      0x1D
 #define ACCEL_XOUT_H       0x3B
+#define GYRO_XOUT_H        0x43
 #define DEVICEID           0x75
 #define DEVICE_ADD         0b1101000
 

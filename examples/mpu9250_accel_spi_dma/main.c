@@ -3,6 +3,8 @@
 #include "dma_spi.h"
 #include "mpu9250_spi.h"
 #include <stdio.h>
+#include "systick.h"
+#include "math.h"
 
 int main(void)
 {
@@ -15,24 +17,43 @@ int main(void)
     uint8_t who_am_i = mpu_read_reg(DEVICEID);
     printf("WHO_AM_I: 0x%02X (expect 0x71)\r\n", who_am_i);
 
-    uint8_t data_buffer[6];
+    uint8_t accel_data_buffer[6];
+    uint8_t gyro_data_buffer[6];
 
     while (1) {
-        mpu_burst_read(ACCEL_XOUT_H, 6, data_buffer);
+        mpu_burst_read(ACCEL_XOUT_H, 6, accel_data_buffer);
+        //mpu_burst_read(GYRO_XOUT_H, 6, gyro_data_buffer);
 
-        printf("raw: %02X %02X %02X %02X %02X %02X\r\n",
-               data_buffer[0], data_buffer[1], data_buffer[2],
-               data_buffer[3], data_buffer[4], data_buffer[5]);
+       // printf("raw: %02X %02X %02X %02X %02X %02X\r\n",
+         //      data_buffer[0], data_buffer[1], data_buffer[2],
+           //    data_buffer[3], data_buffer[4], data_buffer[5]);
 
-        int16_t acc_x = (int16_t)((uint16_t)data_buffer[0] << 8 | data_buffer[1]);
-        int16_t acc_y = (int16_t)((uint16_t)data_buffer[2] << 8 | data_buffer[3]);
-        int16_t acc_z = (int16_t)((uint16_t)data_buffer[4] << 8 | data_buffer[5]);
+        int16_t acc_x = (int16_t)((uint16_t)accel_data_buffer[0] << 8 | accel_data_buffer[1]);
+        int16_t acc_y = (int16_t)((uint16_t)accel_data_buffer[2] << 8 | accel_data_buffer[3]);
+        int16_t acc_z = (int16_t)((uint16_t)accel_data_buffer[4] << 8 | accel_data_buffer[5]);
+
+        //int16_t gyro_x = (int16_t)((uint16_t)gyro_data_buffer[0] << 8 | gyro_data_buffer[1]);
+        //int16_t gyro_y = (int16_t)((uint16_t)gyro_data_buffer[2] << 8 | gyro_data_buffer[3]);
+        //int16_t gyro_z = (int16_t)((uint16_t)gyro_data_buffer[4] << 8 | gyro_data_buffer[5]);
+
 
         int32_t acc_xmg = (int32_t)acc_x * 1000 / 8192;
         int32_t acc_ymg = (int32_t)acc_y * 1000 / 8192;
         int32_t acc_zmg = (int32_t)acc_z * 1000 / 8192;
+        
+
+        float roll_denom = sqrtf((acc_xmg * acc_xmg) + (acc_zmg * acc_zmg));
+        float pitch_denom = sqrtf((acc_ymg * acc_ymg) + (acc_zmg * acc_zmg));
+
+        float roll_angle = (atan2f(acc_ymg, roll_denom)) * (180.0f / 3.142f);
+        float pitch_angle = atan2f(-1 * acc_xmg, pitch_denom) * (180.0f / 3.142f);
 
         printf("acc_x : %ld mg  acc_y : %ld mg  acc_z : %ld mg\r\n",
                (long)acc_xmg, (long)acc_ymg, (long)acc_zmg);
+
+        printf("roll_angle: %ld degrees   pitch angle: %ld degrees\r\n", (long)roll_angle, (long)pitch_angle);
+        
+
+        delay(3000);
     }
 }

@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cmake -B build -DEXAMPLE=pwm_led)"
+      "Bash(cmake -B build -DEXAMPLE=pwm_led)",
+      "Bash(arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --specs=nano.specs --specs=nosys.specs -nostartfiles /tmp/mathtest.o -lm -o /tmp/mathtest.elf)",
+      "Bash(echo \"--- link with -lm exit: $? ---\")",
+      "Bash(rm -f /tmp/mathtest.c /tmp/mathtest.o /tmp/mathtest.elf)",
+      "Bash(find \"/c/Program Files \\(x86\\)/GNU Arm Embedded Toolchain\" -iname \"math.h\" 2>/dev/null)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/**)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/10 2021.10/arm-none-eabi/include/**)"
     ]
   }
 }
