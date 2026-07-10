@@ -18,23 +18,14 @@ int main(void)
     printf("WHO_AM_I: 0x%02X (expect 0x71)\r\n", who_am_i);
 
     uint8_t accel_data_buffer[6];
-    uint8_t gyro_data_buffer[6];
 
     while (1) {
         mpu_burst_read(ACCEL_XOUT_H, 6, accel_data_buffer);
-        //mpu_burst_read(GYRO_XOUT_H, 6, gyro_data_buffer);
 
-       // printf("raw: %02X %02X %02X %02X %02X %02X\r\n",
-         //      data_buffer[0], data_buffer[1], data_buffer[2],
-           //    data_buffer[3], data_buffer[4], data_buffer[5]);
 
         int16_t acc_x = (int16_t)((uint16_t)accel_data_buffer[0] << 8 | accel_data_buffer[1]);
         int16_t acc_y = (int16_t)((uint16_t)accel_data_buffer[2] << 8 | accel_data_buffer[3]);
         int16_t acc_z = (int16_t)((uint16_t)accel_data_buffer[4] << 8 | accel_data_buffer[5]);
-
-        //int16_t gyro_x = (int16_t)((uint16_t)gyro_data_buffer[0] << 8 | gyro_data_buffer[1]);
-        //int16_t gyro_y = (int16_t)((uint16_t)gyro_data_buffer[2] << 8 | gyro_data_buffer[3]);
-        //int16_t gyro_z = (int16_t)((uint16_t)gyro_data_buffer[4] << 8 | gyro_data_buffer[5]);
 
 
         int32_t acc_xmg = (int32_t)acc_x * 1000 / 8192;
