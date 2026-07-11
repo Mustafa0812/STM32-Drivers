@@ -10,7 +10,12 @@
       "Read(//c/Program Files \\\\\\(x86\\\\\\)/GNU Arm Embedded Toolchain/10 2021.10/arm-none-eabi/include/**)",
       "Bash(cmake -B build -DEXAMPLE=mpu_gyro_spi_dma)",
       "Bash(ls drivers/bmp390/)",
-      "Bash(ls drivers/bmp390/README.md)"
+      "Bash(ls drivers/bmp390/README.md)",
+      "Bash(mkdir -p \"/c/Users/musta/OneDrive/Desktop/Embedded C/STM32 Drivers/examples/complementary_filter_spi_dma\")",
+      "Bash(cmake -B build -DEXAMPLE=complementary_filter_spi_dma)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\musta\\OneDrive\\Desktop\\Embedded C\\STM32 Drivers\\examples"
     ]
   }
 }
