@@ -21,15 +21,20 @@ int main(void)
     uint8_t gyro_data_buffer[6];
     uint8_t accel_data_buffer[6];
 
-    uint32_t tim0 = 0;
+    uint32_t tim0 = 0;   /* timestamp of the last reading, for dt */
 
+    /* Gyro/accel blend weight. Close to 1 because the gyro is precise on
+     * the short (per-iteration) timescale; the small (1 - alpha) accel
+     * term is what continuously pulls accumulated gyro drift back down. */
     float alpha = 0.98f;
 
+    /* Persistent filter state — each iteration blends into its own previous
+     * output (not a separately-tracked raw gyro integration), so the small
+     * accel correction actually compounds and cancels drift over time. */
     float roll_angle = 0.0f;
     float pitch_angle = 0.0f;
 
     while (1) {
-
 
         mpu_burst_read(GYRO_XOUT_H, 6, gyro_data_buffer);
         mpu_burst_read(ACCEL_XOUT_H, 6, accel_data_buffer);
@@ -41,30 +46,35 @@ int main(void)
         int16_t acc_y = (int16_t)((uint16_t)accel_data_buffer[2] << 8 | accel_data_buffer[3]);
         int16_t acc_z = (int16_t)((uint16_t)accel_data_buffer[4] << 8 | accel_data_buffer[5]);
 
-
+        /* ±250 dps range → 131 LSB per deg/s */
         float roll_rate = (float)gyro_x / 131.0f;
         float pitch_rate = (float)gyro_y / 131.0f;
 
+        /* Captured right after the reading (not after delay()), so the
+         * delay is correctly counted in the *next* iteration's dt. */
         float dt = (get_tick() - tim0) / 1000.0f;
         tim0 = get_tick();
 
+        /* ±4 g range → 8192 LSB per g; float divisor forces float division */
         float acc_xg = acc_x / 8192.0f;
         float acc_yg = acc_y / 8192.0f;
         float acc_zg = acc_z / 8192.0f;
-        
 
+        /* Tilt angle from gravity's projection onto each axis — accurate
+         * on average, but noisy under any non-gravity (lateral) acceleration */
         float roll_denom = sqrtf((acc_xg * acc_xg) + (acc_zg * acc_zg));
         float pitch_denom = sqrtf((acc_yg * acc_yg) + (acc_zg * acc_zg));
 
         float accel_roll_angle = (atan2f(acc_yg, roll_denom)) * (180.0f / 3.142f);
         float accel_pitch_angle = atan2f(-1 * acc_xg, pitch_denom) * (180.0f / 3.142f);
 
-        roll_angle = alpha * (roll_angle + (roll_rate * dt)) + ((1 - alpha) * accel_roll_angle);                
+        /* Complementary filter: mostly-gyro integration, corrected toward
+         * the accel's drift-free (but noisy) angle each iteration */
+        roll_angle = alpha * (roll_angle + (roll_rate * dt)) + ((1 - alpha) * accel_roll_angle);
         pitch_angle = alpha * (pitch_angle + (pitch_rate * dt)) + ((1 - alpha) * accel_pitch_angle);
 
         printf("roll_angle: %ld degrees   pitch angle: %ld degrees\r\n", (long)roll_angle, (long)pitch_angle);
-        
-        delay(1 );
 
+        delay(1);
     }
 }

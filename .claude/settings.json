@@ -12,7 +12,8 @@
       "Bash(ls drivers/bmp390/)",
       "Bash(ls drivers/bmp390/README.md)",
       "Bash(mkdir -p \"/c/Users/musta/OneDrive/Desktop/Embedded C/STM32 Drivers/examples/complementary_filter_spi_dma\")",
-      "Bash(cmake -B build -DEXAMPLE=complementary_filter_spi_dma)"
+      "Bash(cmake -B build -DEXAMPLE=complementary_filter_spi_dma)",
+      "Bash(cd \"/c/Users/musta/OneDrive/Desktop/Embedded C/STM32 Drivers\" && rm -f build/CMakeFiles/stm32_drivers.elf.dir/examples/complementary_filter_spi_dma/main.c.obj && cmake --build build 2>&1 | tail -30)"
     ],
     "additionalDirectories": [
       "C:\\Users\\musta\\OneDrive\\Desktop\\Embedded C\\STM32 Drivers\\examples"

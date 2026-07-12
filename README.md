@@ -263,6 +263,10 @@ See [`examples/mpu9250_accel_spi_dma/README.md`](examples/mpu9250_accel_spi_dma/
 
 Reads the MPU-9250 gyroscope (±250 °/s, 131 LSB/°/s) over SPI+DMA and integrates angular rate over time (`angle += rate × dt`) to estimate roll/pitch/yaw, using `get_tick()`/`start_timer()` from the SysTick driver to measure `dt` between samples. Demonstrates gyro-only orientation tracking and its core limitation — bias drift accumulates steadily even when stationary, which is why this is a stepping stone toward a complementary filter combining gyro and accelerometer data. See [`examples/mpu_gyro_spi_dma/README.md`](examples/mpu_gyro_spi_dma/README.md) for details.
 
+### complementary_filter_spi_dma
+
+Fuses the accelerometer and gyroscope from `mpu9250_accel_spi_dma` and `mpu_gyro_spi_dma` into drift-free roll/pitch estimates: `angle = α × (angle_prev + gyro_rate × dt) + (1 - α) × accel_angle`, with `α = 0.98`. Feeding the filter's own previous blended output back into the formula (rather than a separately-tracked raw gyro integration) is what lets the small accelerometer correction cancel gyro drift every iteration. No yaw — the accelerometer's gravity-vector reference can't correct yaw rotation, which would need a magnetometer. See [`examples/complementary_filter_spi_dma/README.md`](examples/complementary_filter_spi_dma/README.md) for details.
+
 ### pwm_led
 
 Drives the on-board LED (LD2, PA5) at a fixed, reduced brightness (25% duty cycle) via TIM2 Channel 1 PWM instead of simple digital on/off — demonstrates the `pwm_led.c` driver. See [`examples/pwm_led/README.md`](examples/pwm_led/README.md) for details.
@@ -325,6 +329,10 @@ cmake --build build
 
 # Build the gyro integration example
 cmake -B build -DEXAMPLE=mpu_gyro_spi_dma -G "MinGW Makefiles"
+cmake --build build
+
+# Build the complementary filter example
+cmake -B build -DEXAMPLE=complementary_filter_spi_dma -G "MinGW Makefiles"
 cmake --build build
 
 # Build the PWM LED example
