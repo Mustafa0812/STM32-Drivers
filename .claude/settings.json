@@ -17,7 +17,9 @@
       "Bash(mkdir -p \"/c/Users/musta/OneDrive/Desktop/Embedded C/STM32 Drivers/examples/kalman_filter_spi_dma\")",
       "Bash(cmake -B build -DEXAMPLE=kalman_filter_spi_dma)",
       "Read(//c/Users/musta/OneDrive/Desktop/**)",
-      "Read(//c/Users/musta/**)"
+      "Read(//c/Users/musta/**)",
+      "Bash(rm -rf build)",
+      "Bash(cmake -B build -DEXAMPLE=mpu9250_accel_i2c -G \"MinGW Makefiles\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\musta\\OneDrive\\Desktop\\Embedded C\\STM32 Drivers\\examples"

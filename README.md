@@ -143,7 +143,7 @@ Accelerometer/gyroscope driver for the InvenSense MPU-9250. Two transport implem
 - Wakes device from sleep (PWR_MGMT_1 = 0x00)
 - Enables all accelerometer and gyro axes (PWR_MGMT_2 = 0x00)
 - Sets accelerometer full-scale range to ±4 g (8192 LSB/g)
-- DMA SPI transport also sets gyro full-scale range to ±250 °/s (131 LSB/°/s)
+- DMA SPI and I2C transports also set gyro full-scale range to ±250 °/s (131 LSB/°/s)
 
 #### SPI transport (`mpu9250_spi.c / mpu9250_spi.h`)
 
@@ -164,11 +164,12 @@ Uses the I2C1 bus driver. Device address: 0x68 (AD0 pin low).
 
 | Function | Description |
 |---|---|
-| `mpu_init()` | Wakes device; sets accel range (`i2c_init()` called separately in main) |
+| `mpu_init()` | Wakes device; sets accel/gyro range; enables I2C pass-through and initialises the AK8963 magnetometer (`i2c_init()` called separately in main) |
 | `mpu_write(reg, data)` | Writes one byte to a register |
 | `mpu_burst_read(reg, buffer)` | Reads 6 bytes starting at `reg` into `buffer` |
+| `mag_burst_read(reg, buffer)` / `mag_read_reg(reg)` / `mag_write(reg, data)` | Same pattern, but talking to the AK8963 magnetometer (`MAG_ADDR = 0x0C`) via I2C pass-through instead of the MPU-9250 itself |
 
-> No magnetometer (AK8963) support.
+> Magnetometer (AK8963) support via I2C pass-through — only implemented for this I2C transport, not the SPI transports. See [`drivers/mpu9250/README.md`](drivers/mpu9250/README.md#magnetometer-ak8963) for how pass-through mode works and why it's I2C-only in this repo.
 
 ---
 
@@ -227,13 +228,16 @@ Because the driver uses a registered callback, the same button press can drive e
 
 ### mpu9250_accel_i2c
 
-Initialises UART, I2C, and MPU-9250 (I2C transport), then continuously burst-reads the 6 accelerometer bytes (X/Y/Z high+low), reconstructs signed 16-bit values, converts to milli-g, and prints over UART at 500 ms intervals.
+Initialises UART, I2C, and MPU-9250 (I2C transport), then continuously reads accelerometer data for roll/pitch tilt angles, and — via I2C pass-through mode — reads the AK8963 magnetometer packaged inside the same chip for a compass heading. This is the example where magnetometer support was added; see [`drivers/mpu9250/README.md`](drivers/mpu9250/README.md#magnetometer-ak8963) for the pass-through setup and heading math.
 
 ```
-acc_x : -193 mg  acc_y : -760 mg  acc_z : 355 mg
+roll_angle: 2 degrees   pitch angle: -1 degrees
+heading: 47 degrees
 ```
 
 ![I2C Accelerometer Readings](images/i2c_readings.png)
+
+See [`examples/mpu9250_accel_i2c/README.md`](examples/mpu9250_accel_i2c/README.md) for wiring, build details, and limitations (heading is not tilt-compensated, no hard/soft-iron calibration).
 
 ### mpu9250_accel_spi
 
