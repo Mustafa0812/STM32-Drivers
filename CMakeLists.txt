@@ -37,6 +37,7 @@ set(CMAKE_EXE_LINKER_FLAGS
 #   cmake -B build -DEXAMPLE=mpu9250_accel_spi_dma
 #   cmake -B build -DEXAMPLE=mpu_gyro_spi_dma
 #   cmake -B build -DEXAMPLE=complementary_filter_spi_dma
+#   cmake -B build -DEXAMPLE=kalman_filter_spi_dma
 #   cmake -B build -DEXAMPLE=bmp390_temp_i2c
 #   cmake -B build -DEXAMPLE=pwm_led
 #   cmake -B build -DEXAMPLE=freertos_blink
@@ -67,6 +68,8 @@ elseif(EXAMPLE STREQUAL "mpu9250_accel_spi_dma")
 elseif(EXAMPLE STREQUAL "mpu_gyro_spi_dma")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
 elseif(EXAMPLE STREQUAL "complementary_filter_spi_dma")
+    set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
+elseif(EXAMPLE STREQUAL "kalman_filter_spi_dma")
     set(DEVICE_SOURCES "drivers/mpu9250/src/mpu9250_spi-dma.c")
 elseif(EXAMPLE STREQUAL "bmp390_temp_i2c")
     set(DEVICE_SOURCES "drivers/bmp390/src/bmp390.c")
